@@ -93,7 +93,7 @@ class IncidentTransitionServiceTest {
 
     private Incident incidentWithStatus(Status status) {
         Incident incident = new Incident("title", "description", Severity.HIGH, Priority.P2,
-                Instant.now().plusSeconds(3600), "creator@example.com");
+                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(1800), "creator@example.com");
         incident.setStatus(status);
         return incident;
     }

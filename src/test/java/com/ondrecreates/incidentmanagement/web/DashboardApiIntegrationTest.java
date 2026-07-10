@@ -35,9 +35,9 @@ class DashboardApiIntegrationTest {
     @Test
     void summaryReflectsActiveCriticalAndBreachedCounts() throws Exception {
         incidentRepository.save(new Incident("Critical overdue", "desc", Severity.CRITICAL, Priority.P1,
-                Instant.now().minusSeconds(3600), "creator@example.com"));
+                Instant.now().minusSeconds(3600), Instant.now().plusSeconds(3600), "creator@example.com"));
         incidentRepository.save(new Incident("High, still within SLA", "desc", Severity.HIGH, Priority.P2,
-                Instant.now().plusSeconds(3600), "creator@example.com"));
+                Instant.now().plusSeconds(3600), Instant.now().plusSeconds(7200), "creator@example.com"));
 
         slaBreachJob.detectBreaches();
 

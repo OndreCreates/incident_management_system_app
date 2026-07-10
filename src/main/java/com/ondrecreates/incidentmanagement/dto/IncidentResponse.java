@@ -14,6 +14,7 @@ public record IncidentResponse(
         Priority priority,
         Status status,
         String assignedUserId,
+        Long assignedTeamId,
         Instant slaDeadline,
         boolean slaBreached,
         String rootCause,
@@ -32,6 +33,10 @@ public record IncidentResponse(
                 incident.getPriority(),
                 incident.getStatus(),
                 incident.getAssignedUserId(),
+                // .getId() on a lazy proxy doesn't force initialization -- safe outside a
+                // transaction (open-in-view is false). See IncidentTimelineRepository for
+                // the pattern used where the full related entity actually needs loading.
+                incident.getAssignedTeam() != null ? incident.getAssignedTeam().getId() : null,
                 incident.getSlaDeadline(),
                 incident.isSlaBreached(),
                 incident.getRootCause(),

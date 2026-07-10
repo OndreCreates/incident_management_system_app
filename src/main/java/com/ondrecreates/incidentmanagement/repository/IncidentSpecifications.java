@@ -23,9 +23,16 @@ public final class IncidentSpecifications {
                 : cb.equal(root.get("assignedUserId"), assignedUserId);
     }
 
-    public static Specification<Incident> filter(Status status, Severity severity, String assignedUserId) {
+    public static Specification<Incident> hasAssignedTeamId(Long assignedTeamId) {
+        return (root, query, cb) -> assignedTeamId == null ? null
+                : cb.equal(root.get("assignedTeam").get("id"), assignedTeamId);
+    }
+
+    public static Specification<Incident> filter(Status status, Severity severity, String assignedUserId,
+                                                   Long assignedTeamId) {
         return Specification.where(hasStatus(status))
                 .and(hasSeverity(severity))
-                .and(hasAssignedUserId(assignedUserId));
+                .and(hasAssignedUserId(assignedUserId))
+                .and(hasAssignedTeamId(assignedTeamId));
     }
 }

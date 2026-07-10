@@ -32,7 +32,8 @@ class SlaBreachJobTest {
     @Test
     void marksOverdueOpenIncidentAsBreached() {
         Incident incident = incidentRepository.save(new Incident("DB connection pool exhausted", "desc",
-                Severity.CRITICAL, Priority.P1, Instant.now().minusSeconds(3600), "creator@example.com"));
+                Severity.CRITICAL, Priority.P1, Instant.now().minusSeconds(3600), Instant.now().minusSeconds(7200),
+                "creator@example.com"));
 
         slaBreachJob.detectBreaches();
 
@@ -43,7 +44,7 @@ class SlaBreachJobTest {
     @Test
     void neverMarksTerminalIncidentAsBreachedEvenWhenOverdue() {
         Incident incident = new Incident("Already handled outage", "desc", Severity.HIGH, Priority.P2,
-                Instant.now().minusSeconds(3600), "creator@example.com");
+                Instant.now().minusSeconds(3600), Instant.now().minusSeconds(7200), "creator@example.com");
         incident.setStatus(Status.RESOLVED);
         incident = incidentRepository.save(incident);
 
@@ -56,7 +57,8 @@ class SlaBreachJobTest {
     @Test
     void doesNotMarkIncidentBeforeItsDeadline() {
         Incident incident = incidentRepository.save(new Incident("Fresh incident", "desc", Severity.LOW,
-                Priority.P4, Instant.now().plusSeconds(3600), "creator@example.com"));
+                Priority.P4, Instant.now().plusSeconds(3600), Instant.now().plusSeconds(1800),
+                "creator@example.com"));
 
         slaBreachJob.detectBreaches();
 

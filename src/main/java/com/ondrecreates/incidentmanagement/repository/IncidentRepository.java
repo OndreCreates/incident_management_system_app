@@ -19,4 +19,9 @@ public interface IncidentRepository extends JpaRepository<Incident, Long>, JpaSp
 
     List<Incident> findByStatusNotInAndSlaDeadlineBeforeAndSlaBreachedFalse(Collection<Status> excludedStatuses,
                                                                              Instant now);
+
+    List<Incident> findByStatusNotInAndNearBreachAtBeforeAndSlaBreachedFalseAndNearBreachNotifiedFalse(
+            Collection<Status> excludedStatuses, Instant now);
+
+    List<Incident> findBySlaBreachedTrueAndBreachNotifiedFalse();
 }

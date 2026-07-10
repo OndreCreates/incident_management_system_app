@@ -17,4 +17,9 @@ public enum Severity {
     public Duration getSlaDuration() {
         return slaDuration;
     }
+
+    /** 80% of the SLA window -- when the near-breach escalation fires (Fáze 2). */
+    public Duration getNearBreachDuration() {
+        return slaDuration.multipliedBy(80).dividedBy(100);
+    }
 }

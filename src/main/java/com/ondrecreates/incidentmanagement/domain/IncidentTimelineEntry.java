@@ -76,6 +76,10 @@ public class IncidentTimelineEntry {
         return new IncidentTimelineEntry(incident, EventType.ASSIGNMENT, null, null, null, actorUserId, note);
     }
 
+    public static IncidentTimelineEntry forTeamAssignment(Incident incident, String actorUserId, String note) {
+        return new IncidentTimelineEntry(incident, EventType.TEAM_ASSIGNMENT, null, null, null, actorUserId, note);
+    }
+
     public static IncidentTimelineEntry forComment(Incident incident, IncidentComment comment, String actorUserId) {
         return new IncidentTimelineEntry(incident, EventType.COMMENT, null, null, comment, actorUserId, null);
     }

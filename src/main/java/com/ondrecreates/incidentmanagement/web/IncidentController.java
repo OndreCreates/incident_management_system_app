@@ -3,6 +3,7 @@ package com.ondrecreates.incidentmanagement.web;
 import com.ondrecreates.incidentmanagement.domain.Incident;
 import com.ondrecreates.incidentmanagement.domain.Severity;
 import com.ondrecreates.incidentmanagement.domain.Status;
+import com.ondrecreates.incidentmanagement.dto.AssignTeamRequest;
 import com.ondrecreates.incidentmanagement.dto.CommentRequest;
 import com.ondrecreates.incidentmanagement.dto.CommentResponse;
 import com.ondrecreates.incidentmanagement.dto.CreateIncidentRequest;
@@ -57,8 +58,9 @@ public class IncidentController {
     public Page<IncidentResponse> list(@RequestParam(required = false) Status status,
                                         @RequestParam(required = false) Severity severity,
                                         @RequestParam(required = false) String assignedUserId,
+                                        @RequestParam(required = false) Long assignedTeamId,
                                         Pageable pageable) {
-        return incidentService.listIncidents(status, severity, assignedUserId, pageable)
+        return incidentService.listIncidents(status, severity, assignedUserId, assignedTeamId, pageable)
                 .map(IncidentResponse::from);
     }
 
@@ -78,6 +80,14 @@ public class IncidentController {
         Incident incident = incidentService.transition(id, request.targetStatus(), request.assignedUserId(),
                 jwt.getSubject(), request.note());
         return IncidentResponse.from(incident);
+    }
+
+    @PostMapping("/{id}/assign-team")
+    @Operation(summary = "Route the incident to a team", description = "Independent of individual assignment -- "
+            + "writes a TEAM_ASSIGNMENT timeline entry.")
+    public IncidentResponse assignTeam(@PathVariable Long id, @Valid @RequestBody AssignTeamRequest request,
+                                        @AuthenticationPrincipal Jwt jwt) {
+        return IncidentResponse.from(incidentService.assignTeam(id, request.teamId(), jwt.getSubject()));
     }
 
     @PostMapping("/{id}/comments")

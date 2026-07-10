@@ -26,24 +26,29 @@ public class IncidentService {
     private final IncidentCommentRepository commentRepository;
     private final IncidentTransitionService transitionService;
     private final IncidentAssignmentService assignmentService;
+    private final IncidentTeamAssignmentService teamAssignmentService;
 
     public IncidentService(IncidentRepository incidentRepository,
                             IncidentTimelineRepository timelineRepository,
                             IncidentCommentRepository commentRepository,
                             IncidentTransitionService transitionService,
-                            IncidentAssignmentService assignmentService) {
+                            IncidentAssignmentService assignmentService,
+                            IncidentTeamAssignmentService teamAssignmentService) {
         this.incidentRepository = incidentRepository;
         this.timelineRepository = timelineRepository;
         this.commentRepository = commentRepository;
         this.transitionService = transitionService;
         this.assignmentService = assignmentService;
+        this.teamAssignmentService = teamAssignmentService;
     }
 
     @Transactional
     public Incident createIncident(CreateIncidentRequest request, String createdBy) {
-        Instant slaDeadline = Instant.now().plus(request.severity().getSlaDuration());
+        Instant now = Instant.now();
+        Instant slaDeadline = now.plus(request.severity().getSlaDuration());
+        Instant nearBreachAt = now.plus(request.severity().getNearBreachDuration());
         Incident incident = new Incident(request.title(), request.description(), request.severity(),
-                request.priority(), slaDeadline, createdBy);
+                request.priority(), slaDeadline, nearBreachAt, createdBy);
         return incidentRepository.save(incident);
     }
 
@@ -51,8 +56,10 @@ public class IncidentService {
         return incidentRepository.findById(id).orElseThrow(() -> new IncidentNotFoundException(id));
     }
 
-    public Page<Incident> listIncidents(Status status, Severity severity, String assignedUserId, Pageable pageable) {
-        return incidentRepository.findAll(IncidentSpecifications.filter(status, severity, assignedUserId), pageable);
+    public Page<Incident> listIncidents(Status status, Severity severity, String assignedUserId, Long assignedTeamId,
+                                         Pageable pageable) {
+        return incidentRepository.findAll(
+                IncidentSpecifications.filter(status, severity, assignedUserId, assignedTeamId), pageable);
     }
 
     public List<IncidentTimelineEntry> getTimeline(Long incidentId) {
@@ -67,6 +74,12 @@ public class IncidentService {
             incident = assignmentService.assign(incident, assignedUserId, actorUserId);
         }
         return transitionService.transition(incident, target, actorUserId, note);
+    }
+
+    @Transactional
+    public Incident assignTeam(Long incidentId, Long teamId, String actorUserId) {
+        Incident incident = getIncidentOrThrow(incidentId);
+        return teamAssignmentService.assignTeam(incident, teamId, actorUserId);
     }
 
     @Transactional

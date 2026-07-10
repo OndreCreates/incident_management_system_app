@@ -29,6 +29,16 @@ spring:
           # JWKS_URI env proměnnou na http://identity-server:9000/oauth2/jwks
           jwk-set-uri: ${JWKS_URI:http://localhost:9000/oauth2/jwks}
 
+notification:
+  # notification_center_app defaults to :8080 too -- when running both locally
+  # outside Docker, run one of them on a different port. Verified contract
+  # (POST /api/v1/notifications, X-API-Key) against the real running service,
+  # see README.
+  api-url: ${NOTIFICATION_API_URL:http://localhost:8081}
+  # No safe default: a per-client secret issued by notification_center_app's
+  # admin API. Escalation emails are skipped (logged, not fatal) when unset.
+  api-key: ${NOTIFICATION_API_KEY:}
+
 management:
   endpoints:
     web:

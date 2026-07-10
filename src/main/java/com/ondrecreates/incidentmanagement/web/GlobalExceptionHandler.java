@@ -2,6 +2,10 @@ package com.ondrecreates.incidentmanagement.web;
 
 import com.ondrecreates.incidentmanagement.exception.IncidentNotFoundException;
 import com.ondrecreates.incidentmanagement.exception.InvalidTransitionException;
+import com.ondrecreates.incidentmanagement.exception.PostmortemAlreadyExistsException;
+import com.ondrecreates.incidentmanagement.exception.PostmortemNotAllowedException;
+import com.ondrecreates.incidentmanagement.exception.PostmortemNotFoundException;
+import com.ondrecreates.incidentmanagement.exception.TeamNotFoundException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -30,6 +34,38 @@ public class GlobalExceptionHandler {
         body.put("error", "INCIDENT_NOT_FOUND");
         body.put("message", ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(TeamNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleTeamNotFound(TeamNotFoundException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", "TEAM_NOT_FOUND");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(PostmortemNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handlePostmortemNotFound(PostmortemNotFoundException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", "POSTMORTEM_NOT_FOUND");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(PostmortemNotAllowedException.class)
+    public ResponseEntity<Map<String, Object>> handlePostmortemNotAllowed(PostmortemNotAllowedException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", "POSTMORTEM_NOT_ALLOWED");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(PostmortemAlreadyExistsException.class)
+    public ResponseEntity<Map<String, Object>> handlePostmortemAlreadyExists(PostmortemAlreadyExistsException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", "POSTMORTEM_ALREADY_EXISTS");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
