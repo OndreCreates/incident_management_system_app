@@ -20,6 +20,15 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # localhost funguje pro lokální mvn spring-boot:run; ve Fázi 1G, až
+          # poběží v docker-compose vedle identity-serveru, se přepne přes
+          # JWKS_URI env proměnnou na http://identity-server:9000/oauth2/jwks
+          jwk-set-uri: ${JWKS_URI:http://localhost:9000/oauth2/jwks}
+
 management:
   endpoints:
     web:

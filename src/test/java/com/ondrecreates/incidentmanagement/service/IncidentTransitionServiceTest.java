@@ -71,13 +71,13 @@ class IncidentTransitionServiceTest {
         boolean shouldSucceed = EXPECTED_TRANSITIONS.getOrDefault(from, Set.of()).contains(to);
 
         if (shouldSucceed) {
-            Incident result = service.transition(incident, to, 42L, "note");
+            Incident result = service.transition(incident, to, "actor@example.com", "note");
 
             assertThat(result.getStatus()).isEqualTo(to);
             verify(incidentRepository, times(1)).save(incident);
             verify(timelineRepository, times(1)).save(any(IncidentTimelineEntry.class));
         } else {
-            assertThatThrownBy(() -> service.transition(incident, to, 42L, "note"))
+            assertThatThrownBy(() -> service.transition(incident, to, "actor@example.com", "note"))
                     .isInstanceOf(InvalidTransitionException.class)
                     .satisfies(ex -> {
                         InvalidTransitionException invalid = (InvalidTransitionException) ex;
@@ -93,7 +93,7 @@ class IncidentTransitionServiceTest {
 
     private Incident incidentWithStatus(Status status) {
         Incident incident = new Incident("title", "description", Severity.HIGH, Priority.P2,
-                Instant.now().plusSeconds(3600), 1L);
+                Instant.now().plusSeconds(3600), "creator@example.com");
         incident.setStatus(status);
         return incident;
     }

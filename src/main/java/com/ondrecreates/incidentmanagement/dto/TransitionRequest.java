@@ -9,13 +9,12 @@ import jakarta.validation.constraints.NotNull;
  * nebo reassignment INVESTIGATING -> ASSIGNED). Zapíše se jako
  * samostatná ASSIGNMENT timeline entry vedle STATUS_CHANGE entry.
  *
- * actorUserId je dočasně součástí těla requestu — Fáze 1D ho nahradí
- * hodnotou z JWT a toto pole zmizí z veřejného kontraktu.
+ * actorUserId v těle není — bere se z JWT sub claimu (email), nikdy
+ * z požadavku samotného.
  */
 public record TransitionRequest(
         @NotNull Status targetStatus,
         String note,
-        Long assignedUserId,
-        @NotNull Long actorUserId
+        String assignedUserId
 ) {
 }

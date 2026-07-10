@@ -1,6 +1,7 @@
 package com.ondrecreates.incidentmanagement.web;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,11 +21,20 @@ import org.springframework.transaction.annotation.Transactional;
  * Integrační test proti reálné MySQL (docker-compose service) — happy path
  * celého CRUD flow + 409 na nevalidní přechod, viz FAZE_1_PROMPT.md Fáze 1C.
  * Každý test běží ve vlastní transakci, která se na konci rollbackne.
+ *
+ * Autentizace se simuluje přes SecurityMockMvcRequestPostProcessors.jwt() —
+ * ověřuje naši vlastní autorizační/extrakční logiku (actorUserId z sub
+ * claimu). Ověření proti skutečně vydanému tokenu z identity_server_app je
+ * záměrně mimo automatizovanou sadu — jde o plný authorization_code + PKCE
+ * flow s přihlašovací stránkou, který pokrývá manuální E2E krok ve Fázi 1G.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 class IncidentApiIntegrationTest {
+
+    private static final String CREATOR_EMAIL = "creator@example.com";
+    private static final String RESPONDER_EMAIL = "responder@example.com";
 
     @Autowired
     private MockMvc mockMvc;
@@ -38,25 +48,26 @@ class IncidentApiIntegrationTest {
                 "title", "Payment API returning 500s",
                 "description", "Elevated error rate on /payments",
                 "severity", "CRITICAL",
-                "priority", "P1",
-                "createdBy", 100L
+                "priority", "P1"
         );
 
         String createResponse = mockMvc.perform(post("/api/v1/incidents")
+                        .with(jwt().jwt(builder -> builder.subject(CREATOR_EMAIL)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("CREATED"))
+                .andExpect(jsonPath("$.createdBy").value(CREATOR_EMAIL))
                 .andExpect(jsonPath("$.slaBreached").value(false))
                 .andReturn().getResponse().getContentAsString();
 
         Long incidentId = objectMapper.readTree(createResponse).get("id").asLong();
 
-        mockMvc.perform(get("/api/v1/incidents"))
+        mockMvc.perform(get("/api/v1/incidents").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isNotEmpty());
 
-        mockMvc.perform(get("/api/v1/incidents/{id}", incidentId))
+        mockMvc.perform(get("/api/v1/incidents/{id}", incidentId).with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.incident.id").value(incidentId))
                 .andExpect(jsonPath("$.timeline").isEmpty());
@@ -64,37 +75,38 @@ class IncidentApiIntegrationTest {
         Map<String, Object> assignTransition = Map.of(
                 "targetStatus", "ASSIGNED",
                 "note", "Assigning to on-call",
-                "assignedUserId", 200L,
-                "actorUserId", 100L
+                "assignedUserId", RESPONDER_EMAIL
         );
         mockMvc.perform(post("/api/v1/incidents/{id}/transition", incidentId)
+                        .with(jwt().jwt(builder -> builder.subject(CREATOR_EMAIL)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(assignTransition)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ASSIGNED"))
-                .andExpect(jsonPath("$.assignedUserId").value(200));
+                .andExpect(jsonPath("$.assignedUserId").value(RESPONDER_EMAIL));
 
         Map<String, Object> investigateTransition = Map.of(
-                "targetStatus", "INVESTIGATING",
-                "actorUserId", 200L
+                "targetStatus", "INVESTIGATING"
         );
         mockMvc.perform(post("/api/v1/incidents/{id}/transition", incidentId)
+                        .with(jwt().jwt(builder -> builder.subject(RESPONDER_EMAIL)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(investigateTransition)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("INVESTIGATING"));
 
         Map<String, Object> comment = Map.of(
-                "content", "Root cause looks like a DB connection pool exhaustion",
-                "authorUserId", 200L
+                "content", "Root cause looks like a DB connection pool exhaustion"
         );
         mockMvc.perform(post("/api/v1/incidents/{id}/comments", incidentId)
+                        .with(jwt().jwt(builder -> builder.subject(RESPONDER_EMAIL)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(comment)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.content").value(comment.get("content")));
+                .andExpect(jsonPath("$.content").value(comment.get("content")))
+                .andExpect(jsonPath("$.authorUserId").value(RESPONDER_EMAIL));
 
-        mockMvc.perform(get("/api/v1/incidents/{id}/timeline", incidentId))
+        mockMvc.perform(get("/api/v1/incidents/{id}/timeline", incidentId).with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(4)))
                 .andExpect(jsonPath("$[0].eventType").value("ASSIGNMENT"))
@@ -111,11 +123,11 @@ class IncidentApiIntegrationTest {
         Map<String, Object> createRequest = Map.of(
                 "title", "Disk usage critical on db-primary",
                 "severity", "HIGH",
-                "priority", "P2",
-                "createdBy", 100L
+                "priority", "P2"
         );
 
         String createResponse = mockMvc.perform(post("/api/v1/incidents")
+                        .with(jwt().jwt(builder -> builder.subject(CREATOR_EMAIL)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
                 .andExpect(status().isCreated())
@@ -124,11 +136,11 @@ class IncidentApiIntegrationTest {
         Long incidentId = objectMapper.readTree(createResponse).get("id").asLong();
 
         Map<String, Object> invalidTransition = Map.of(
-                "targetStatus", "RESOLVED",
-                "actorUserId", 100L
+                "targetStatus", "RESOLVED"
         );
 
         mockMvc.perform(post("/api/v1/incidents/{id}/transition", incidentId)
+                        .with(jwt().jwt(builder -> builder.subject(CREATOR_EMAIL)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidTransition)))
                 .andExpect(status().isConflict())

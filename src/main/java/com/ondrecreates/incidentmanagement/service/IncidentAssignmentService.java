@@ -27,7 +27,7 @@ public class IncidentAssignmentService {
     }
 
     @Transactional
-    public Incident assign(Incident incident, Long assigneeUserId, Long actorUserId) {
+    public Incident assign(Incident incident, String assigneeUserId, String actorUserId) {
         if (Objects.equals(incident.getAssignedUserId(), assigneeUserId)) {
             return incident;
         }

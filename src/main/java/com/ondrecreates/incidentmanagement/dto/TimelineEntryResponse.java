@@ -11,7 +11,7 @@ public record TimelineEntryResponse(
         Status fromStatus,
         Status toStatus,
         Long commentId,
-        Long actorUserId,
+        String actorUserId,
         String note,
         Instant createdAt
 ) {

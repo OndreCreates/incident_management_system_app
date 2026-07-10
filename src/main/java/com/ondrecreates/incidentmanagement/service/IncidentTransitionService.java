@@ -37,7 +37,7 @@ public class IncidentTransitionService {
     }
 
     @Transactional
-    public Incident transition(Incident incident, Status target, Long actorUserId, String note) {
+    public Incident transition(Incident incident, Status target, String actorUserId, String note) {
         Set<Status> allowed = allowedNextStatuses(incident.getStatus());
         if (!allowed.contains(target)) {
             throw new InvalidTransitionException(incident.getStatus(), target, allowed);

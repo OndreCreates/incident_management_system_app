@@ -10,7 +10,6 @@ public record CreateIncidentRequest(
         @NotBlank @Size(max = 255) String title,
         String description,
         @NotNull Severity severity,
-        @NotNull Priority priority,
-        @NotNull Long createdBy
+        @NotNull Priority priority
 ) {
 }

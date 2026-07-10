@@ -43,7 +43,7 @@ public class IncidentTimelineEntry {
     private IncidentComment comment;
 
     @Column(name = "actor_user_id", nullable = false)
-    private Long actorUserId;
+    private String actorUserId;
 
     private String note;
 
@@ -56,7 +56,7 @@ public class IncidentTimelineEntry {
     }
 
     private IncidentTimelineEntry(Incident incident, EventType eventType, Status fromStatus,
-                                   Status toStatus, IncidentComment comment, Long actorUserId, String note) {
+                                   Status toStatus, IncidentComment comment, String actorUserId, String note) {
         this.incident = incident;
         this.eventType = eventType;
         this.fromStatus = fromStatus;
@@ -67,16 +67,16 @@ public class IncidentTimelineEntry {
     }
 
     public static IncidentTimelineEntry forStatusChange(Incident incident, Status fromStatus, Status toStatus,
-                                                          Long actorUserId, String note) {
+                                                          String actorUserId, String note) {
         return new IncidentTimelineEntry(incident, EventType.STATUS_CHANGE, fromStatus, toStatus, null,
                 actorUserId, note);
     }
 
-    public static IncidentTimelineEntry forAssignment(Incident incident, Long actorUserId, String note) {
+    public static IncidentTimelineEntry forAssignment(Incident incident, String actorUserId, String note) {
         return new IncidentTimelineEntry(incident, EventType.ASSIGNMENT, null, null, null, actorUserId, note);
     }
 
-    public static IncidentTimelineEntry forComment(Incident incident, IncidentComment comment, Long actorUserId) {
+    public static IncidentTimelineEntry forComment(Incident incident, IncidentComment comment, String actorUserId) {
         return new IncidentTimelineEntry(incident, EventType.COMMENT, null, null, comment, actorUserId, null);
     }
 
@@ -104,7 +104,7 @@ public class IncidentTimelineEntry {
         return comment;
     }
 
-    public Long getActorUserId() {
+    public String getActorUserId() {
         return actorUserId;
     }
 

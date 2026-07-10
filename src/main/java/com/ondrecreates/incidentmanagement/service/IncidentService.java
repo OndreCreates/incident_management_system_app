@@ -40,10 +40,10 @@ public class IncidentService {
     }
 
     @Transactional
-    public Incident createIncident(CreateIncidentRequest request) {
+    public Incident createIncident(CreateIncidentRequest request, String createdBy) {
         Instant slaDeadline = Instant.now().plus(request.severity().getSlaDuration());
         Incident incident = new Incident(request.title(), request.description(), request.severity(),
-                request.priority(), slaDeadline, request.createdBy());
+                request.priority(), slaDeadline, createdBy);
         return incidentRepository.save(incident);
     }
 
@@ -51,7 +51,7 @@ public class IncidentService {
         return incidentRepository.findById(id).orElseThrow(() -> new IncidentNotFoundException(id));
     }
 
-    public Page<Incident> listIncidents(Status status, Severity severity, Long assignedUserId, Pageable pageable) {
+    public Page<Incident> listIncidents(Status status, Severity severity, String assignedUserId, Pageable pageable) {
         return incidentRepository.findAll(IncidentSpecifications.filter(status, severity, assignedUserId), pageable);
     }
 
@@ -61,7 +61,7 @@ public class IncidentService {
     }
 
     @Transactional
-    public Incident transition(Long incidentId, Status target, Long assignedUserId, Long actorUserId, String note) {
+    public Incident transition(Long incidentId, Status target, String assignedUserId, String actorUserId, String note) {
         Incident incident = getIncidentOrThrow(incidentId);
         if (assignedUserId != null) {
             incident = assignmentService.assign(incident, assignedUserId, actorUserId);
@@ -70,7 +70,7 @@ public class IncidentService {
     }
 
     @Transactional
-    public IncidentComment addComment(Long incidentId, String content, Long authorUserId) {
+    public IncidentComment addComment(Long incidentId, String content, String authorUserId) {
         Incident incident = getIncidentOrThrow(incidentId);
         IncidentComment comment = commentRepository.save(new IncidentComment(incident, authorUserId, content));
         timelineRepository.save(IncidentTimelineEntry.forComment(incident, comment, authorUserId));

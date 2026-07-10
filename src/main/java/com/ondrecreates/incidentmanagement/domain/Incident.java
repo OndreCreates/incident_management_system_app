@@ -38,7 +38,7 @@ public class Incident {
     private Status status;
 
     @Column(name = "assigned_user_id")
-    private Long assignedUserId;
+    private String assignedUserId;
 
     @Column(name = "sla_deadline", nullable = false)
     private Instant slaDeadline;
@@ -52,7 +52,7 @@ public class Incident {
     private String resolution;
 
     @Column(name = "created_by", nullable = false)
-    private Long createdBy;
+    private String createdBy;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -67,7 +67,7 @@ public class Incident {
     }
 
     public Incident(String title, String description, Severity severity, Priority priority,
-                     Instant slaDeadline, Long createdBy) {
+                     Instant slaDeadline, String createdBy) {
         this.title = title;
         this.description = description;
         this.severity = severity;
@@ -118,11 +118,11 @@ public class Incident {
         this.status = status;
     }
 
-    public Long getAssignedUserId() {
+    public String getAssignedUserId() {
         return assignedUserId;
     }
 
-    public void setAssignedUserId(Long assignedUserId) {
+    public void setAssignedUserId(String assignedUserId) {
         this.assignedUserId = assignedUserId;
     }
 
@@ -154,7 +154,7 @@ public class Incident {
         this.resolution = resolution;
     }
 
-    public Long getCreatedBy() {
+    public String getCreatedBy() {
         return createdBy;
     }
 

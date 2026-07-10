@@ -18,12 +18,12 @@ public final class IncidentSpecifications {
         return (root, query, cb) -> severity == null ? null : cb.equal(root.get("severity"), severity);
     }
 
-    public static Specification<Incident> hasAssignedUserId(Long assignedUserId) {
+    public static Specification<Incident> hasAssignedUserId(String assignedUserId) {
         return (root, query, cb) -> assignedUserId == null ? null
                 : cb.equal(root.get("assignedUserId"), assignedUserId);
     }
 
-    public static Specification<Incident> filter(Status status, Severity severity, Long assignedUserId) {
+    public static Specification<Incident> filter(Status status, Severity severity, String assignedUserId) {
         return Specification.where(hasStatus(status))
                 .and(hasSeverity(severity))
                 .and(hasAssignedUserId(assignedUserId));

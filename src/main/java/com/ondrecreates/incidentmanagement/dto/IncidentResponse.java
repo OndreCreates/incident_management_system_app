@@ -13,12 +13,12 @@ public record IncidentResponse(
         Severity severity,
         Priority priority,
         Status status,
-        Long assignedUserId,
+        String assignedUserId,
         Instant slaDeadline,
         boolean slaBreached,
         String rootCause,
         String resolution,
-        Long createdBy,
+        String createdBy,
         Instant createdAt,
         Instant updatedAt
 ) {

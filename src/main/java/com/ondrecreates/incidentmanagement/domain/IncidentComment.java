@@ -25,7 +25,7 @@ public class IncidentComment {
     private Incident incident;
 
     @Column(name = "author_user_id", nullable = false)
-    private Long authorUserId;
+    private String authorUserId;
 
     @Column(nullable = false)
     private String content;
@@ -38,7 +38,7 @@ public class IncidentComment {
         // JPA
     }
 
-    public IncidentComment(Incident incident, Long authorUserId, String content) {
+    public IncidentComment(Incident incident, String authorUserId, String content) {
         this.incident = incident;
         this.authorUserId = authorUserId;
         this.content = content;
@@ -52,7 +52,7 @@ public class IncidentComment {
         return incident;
     }
 
-    public Long getAuthorUserId() {
+    public String getAuthorUserId() {
         return authorUserId;
     }
 
