@@ -115,7 +115,8 @@ class IncidentApiIntegrationTest {
                 .andExpect(jsonPath("$[2].eventType").value("STATUS_CHANGE"))
                 .andExpect(jsonPath("$[2].toStatus").value("INVESTIGATING"))
                 .andExpect(jsonPath("$[3].eventType").value("COMMENT"))
-                .andExpect(jsonPath("$[3].commentId").isNotEmpty());
+                .andExpect(jsonPath("$[3].commentId").isNotEmpty())
+                .andExpect(jsonPath("$[3].commentContent").value(comment.get("content")));
     }
 
     @Test

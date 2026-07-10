@@ -11,6 +11,7 @@ public record TimelineEntryResponse(
         Status fromStatus,
         Status toStatus,
         Long commentId,
+        String commentContent,
         String actorUserId,
         String note,
         Instant createdAt
@@ -23,6 +24,7 @@ public record TimelineEntryResponse(
                 entry.getFromStatus(),
                 entry.getToStatus(),
                 entry.getComment() != null ? entry.getComment().getId() : null,
+                entry.getComment() != null ? entry.getComment().getContent() : null,
                 entry.getActorUserId(),
                 entry.getNote(),
                 entry.getCreatedAt()
