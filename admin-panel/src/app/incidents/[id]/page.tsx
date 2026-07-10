@@ -1,10 +1,17 @@
 import { notFound } from "next/navigation";
-import { ApiError, fetchIncidentDetail } from "@/lib/api";
+import { ApiError, fetchIncidentDetail, fetchPostmortem, fetchTeam, fetchTeams } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
-import { ALLOWED_TRANSITIONS, type Status, type TimelineEntry } from "@/lib/types";
+import { ALLOWED_TRANSITIONS, TERMINAL_STATUSES, type Postmortem, type Status, type Team,
+    type TimelineEntry } from "@/lib/types";
 import { Nav } from "@/components/Nav";
 import { SeverityBadge, StatusBadge, BreachedBadge } from "@/components/Badges";
-import { addCommentAction, transitionIncidentAction } from "@/app/incidents/actions";
+import {
+    addCommentAction,
+    assignTeamAction,
+    createPostmortemAction,
+    transitionIncidentAction,
+    updatePostmortemAction,
+} from "@/app/incidents/actions";
 
 interface IncidentDetailPageProps {
     params: Promise<{ id: string }>;
@@ -30,6 +37,13 @@ export default async function IncidentDetailPage({ params, searchParams }: Incid
 
     const { incident, timeline } = detail;
     const nextStatuses = ALLOWED_TRANSITIONS[incident.status] ?? [];
+    const isTerminal = TERMINAL_STATUSES.includes(incident.status);
+
+    const [teams, assignedTeam, postmortem] = await Promise.all([
+        fetchTeams(session.accessToken),
+        incident.assignedTeamId ? fetchTeam(session.accessToken, incident.assignedTeamId) : Promise.resolve(null),
+        isTerminal ? fetchPostmortemOrNull(session.accessToken, id) : Promise.resolve(null),
+    ]);
 
     return (
         <div className="flex min-h-screen flex-col bg-gradient-to-b from-slate-950 to-slate-900 text-slate-100">
@@ -56,6 +70,7 @@ export default async function IncidentDetailPage({ params, searchParams }: Incid
                         <dl className="grid grid-cols-2 gap-3 text-sm">
                             <Row label="Vytvořil" value={incident.createdBy} />
                             <Row label="Přiřazeno" value={incident.assignedUserId ?? "—"} />
+                            <Row label="Tým" value={assignedTeam?.name ?? "—"} />
                             <Row label="SLA deadline" value={formatDate(incident.slaDeadline)} />
                             <Row label="Vytvořeno" value={formatDate(incident.createdAt)} />
                             {incident.rootCause && <Row label="Root cause" value={incident.rootCause} />}
@@ -73,6 +88,36 @@ export default async function IncidentDetailPage({ params, searchParams }: Incid
                                     <TransitionForm key={status} incidentId={incident.id} status={status} />
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {teams.length > 0 && (
+                        <div className="rounded-xl border border-white/10 bg-slate-900/60 p-6">
+                            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                Routovat na tým
+                            </h2>
+                            <form action={assignTeamAction.bind(null, incident.id)} className="flex gap-3">
+                                <select
+                                    name="teamId"
+                                    defaultValue={incident.assignedTeamId ?? ""}
+                                    className="flex-1 rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm focus:border-red-400 focus:outline-none"
+                                >
+                                    <option value="" disabled>
+                                        Vyber tým
+                                    </option>
+                                    {teams.map((team) => (
+                                        <option key={team.id} value={team.id}>
+                                            {team.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="submit"
+                                    className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium hover:bg-slate-700"
+                                >
+                                    Přiřadit
+                                </button>
+                            </form>
                         </div>
                     )}
 
@@ -96,6 +141,10 @@ export default async function IncidentDetailPage({ params, searchParams }: Incid
                             </button>
                         </form>
                     </div>
+
+                    {isTerminal && (
+                        <PostmortemSection incidentId={incident.id} postmortem={postmortem} />
+                    )}
                 </section>
 
                 <section className="rounded-xl border border-white/10 bg-slate-900/60 p-6">
@@ -108,6 +157,75 @@ export default async function IncidentDetailPage({ params, searchParams }: Incid
                     </ol>
                 </section>
             </main>
+        </div>
+    );
+}
+
+async function fetchPostmortemOrNull(accessToken: string, incidentId: number): Promise<Postmortem | null> {
+    try {
+        return await fetchPostmortem(accessToken, incidentId);
+    } catch (cause) {
+        if (cause instanceof ApiError && cause.status === 404) {
+            return null;
+        }
+        throw cause;
+    }
+}
+
+function PostmortemSection({ incidentId, postmortem }: { incidentId: number; postmortem: Postmortem | null }) {
+    const action = postmortem ? updatePostmortemAction.bind(null, incidentId) : createPostmortemAction.bind(null, incidentId);
+
+    return (
+        <div className="rounded-xl border border-white/10 bg-slate-900/60 p-6">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Postmortem {postmortem ? "" : "(nový)"}
+            </h2>
+            <form action={action} className="flex flex-col gap-4">
+                <PostmortemField name="impact" label="Dopad" defaultValue={postmortem?.impact} />
+                <PostmortemField name="rootCause" label="Root cause" defaultValue={postmortem?.rootCause} />
+                <PostmortemField name="resolution" label="Řešení" defaultValue={postmortem?.resolution} />
+                <PostmortemField name="lessonsLearned" label="Lessons learned" defaultValue={postmortem?.lessonsLearned} />
+                <PostmortemField
+                    name="actionItems"
+                    label="Action items (volitelné)"
+                    defaultValue={postmortem?.actionItems ?? undefined}
+                    required={false}
+                />
+                <button
+                    type="submit"
+                    className="self-start rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400"
+                >
+                    {postmortem ? "Uložit změny" : "Vytvořit postmortem"}
+                </button>
+            </form>
+        </div>
+    );
+}
+
+function PostmortemField({
+    name,
+    label,
+    defaultValue,
+    required = true,
+}: {
+    name: string;
+    label: string;
+    defaultValue?: string;
+    required?: boolean;
+}) {
+    return (
+        <div className="flex flex-col gap-1.5">
+            <label htmlFor={name} className="text-xs text-slate-500">
+                {label}
+            </label>
+            <textarea
+                id={name}
+                name={name}
+                required={required}
+                defaultValue={defaultValue}
+                rows={3}
+                className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm focus:border-red-400 focus:outline-none"
+            />
         </div>
     );
 }
@@ -150,6 +268,8 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
                 return `${entry.fromStatus} → ${entry.toStatus}`;
             case "ASSIGNMENT":
                 return "Přiřazení";
+            case "TEAM_ASSIGNMENT":
+                return "Routováno na tým";
             case "COMMENT":
                 return "Komentář";
         }

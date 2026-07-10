@@ -2,7 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { ApiError, addComment, createIncident, transitionIncident } from "@/lib/api";
+import {
+    ApiError,
+    addComment,
+    assignTeam,
+    createIncident,
+    createPostmortem,
+    transitionIncident,
+    updatePostmortem,
+} from "@/lib/api";
 import { requireFreshAccessToken } from "@/lib/auth";
 import type { Priority, Severity, Status } from "@/lib/types";
 
@@ -67,6 +75,55 @@ export async function addCommentAction(id: number, formData: FormData): Promise<
     if (content) {
         await addComment(accessToken, id, content);
     }
+
+    revalidatePath(`/incidents/${id}`);
+    redirect(`/incidents/${id}`);
+}
+
+export async function assignTeamAction(id: number, formData: FormData): Promise<void> {
+    const accessToken = await requireFreshAccessToken();
+
+    const teamId = Number(formData.get("teamId"));
+    if (teamId) {
+        await assignTeam(accessToken, id, teamId);
+    }
+
+    revalidatePath(`/incidents/${id}`);
+    redirect(`/incidents/${id}`);
+}
+
+function postmortemInputFrom(formData: FormData) {
+    const actionItems = String(formData.get("actionItems") ?? "").trim();
+    return {
+        impact: String(formData.get("impact") ?? "").trim(),
+        rootCause: String(formData.get("rootCause") ?? "").trim(),
+        resolution: String(formData.get("resolution") ?? "").trim(),
+        lessonsLearned: String(formData.get("lessonsLearned") ?? "").trim(),
+        actionItems: actionItems || undefined,
+    };
+}
+
+export async function createPostmortemAction(id: number, formData: FormData): Promise<void> {
+    const accessToken = await requireFreshAccessToken();
+
+    try {
+        await createPostmortem(accessToken, id, postmortemInputFrom(formData));
+    } catch (cause) {
+        if (cause instanceof ApiError && cause.status === 409) {
+            const body = cause.body as { message?: string } | null;
+            redirect(`/incidents/${id}?error=${encodeURIComponent(body?.message ?? "Postmortem se nepodařilo vytvořit.")}`);
+        }
+        throw cause;
+    }
+
+    revalidatePath(`/incidents/${id}`);
+    redirect(`/incidents/${id}`);
+}
+
+export async function updatePostmortemAction(id: number, formData: FormData): Promise<void> {
+    const accessToken = await requireFreshAccessToken();
+
+    await updatePostmortem(accessToken, id, postmortemInputFrom(formData));
 
     revalidatePath(`/incidents/${id}`);
     redirect(`/incidents/${id}`);

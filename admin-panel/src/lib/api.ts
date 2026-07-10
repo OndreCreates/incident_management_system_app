@@ -5,8 +5,10 @@ import type {
     Incident,
     IncidentDetail,
     IncidentPage,
+    Postmortem,
     Severity,
     Status,
+    Team,
 } from "@/lib/types";
 
 /** Thrown for any non-2xx backend response. Carries the parsed JSON body (when present) so
@@ -57,6 +59,7 @@ export interface IncidentFilters {
     status?: Status;
     severity?: Severity;
     assignedUserId?: string;
+    assignedTeamId?: number;
     page?: number;
     size?: number;
 }
@@ -66,6 +69,7 @@ export function fetchIncidents(accessToken: string, filters: IncidentFilters): P
     if (filters.status) params.set("status", filters.status);
     if (filters.severity) params.set("severity", filters.severity);
     if (filters.assignedUserId) params.set("assignedUserId", filters.assignedUserId);
+    if (filters.assignedTeamId) params.set("assignedTeamId", String(filters.assignedTeamId));
     params.set("page", String(filters.page ?? 0));
     params.set("size", String(filters.size ?? 20));
 
@@ -111,5 +115,67 @@ export function addComment(accessToken: string, id: number, content: string): Pr
     return apiFetch<Comment>(accessToken, `/api/v1/incidents/${id}/comments`, {
         method: "POST",
         body: JSON.stringify({ content }),
+    });
+}
+
+export function assignTeam(accessToken: string, incidentId: number, teamId: number): Promise<Incident> {
+    return apiFetch<Incident>(accessToken, `/api/v1/incidents/${incidentId}/assign-team`, {
+        method: "POST",
+        body: JSON.stringify({ teamId }),
+    });
+}
+
+export function fetchTeams(accessToken: string): Promise<Team[]> {
+    return apiFetch<Team[]>(accessToken, "/api/v1/teams");
+}
+
+export function fetchTeam(accessToken: string, id: number): Promise<Team> {
+    return apiFetch<Team>(accessToken, `/api/v1/teams/${id}`);
+}
+
+export interface CreateTeamInput {
+    name: string;
+    memberEmails: string[];
+}
+
+export function createTeam(accessToken: string, input: CreateTeamInput): Promise<Team> {
+    return apiFetch<Team>(accessToken, "/api/v1/teams", {
+        method: "POST",
+        body: JSON.stringify(input),
+    });
+}
+
+export function addTeamMember(accessToken: string, teamId: number, userEmail: string): Promise<Team> {
+    return apiFetch<Team>(accessToken, `/api/v1/teams/${teamId}/members`, {
+        method: "POST",
+        body: JSON.stringify({ userEmail }),
+    });
+}
+
+export interface PostmortemInput {
+    impact: string;
+    rootCause: string;
+    resolution: string;
+    lessonsLearned: string;
+    actionItems?: string;
+}
+
+export function fetchPostmortem(accessToken: string, incidentId: number): Promise<Postmortem> {
+    return apiFetch<Postmortem>(accessToken, `/api/v1/incidents/${incidentId}/postmortem`);
+}
+
+export function createPostmortem(accessToken: string, incidentId: number,
+                                  input: PostmortemInput): Promise<Postmortem> {
+    return apiFetch<Postmortem>(accessToken, `/api/v1/incidents/${incidentId}/postmortem`, {
+        method: "POST",
+        body: JSON.stringify(input),
+    });
+}
+
+export function updatePostmortem(accessToken: string, incidentId: number,
+                                  input: PostmortemInput): Promise<Postmortem> {
+    return apiFetch<Postmortem>(accessToken, `/api/v1/incidents/${incidentId}/postmortem`, {
+        method: "PUT",
+        body: JSON.stringify(input),
     });
 }

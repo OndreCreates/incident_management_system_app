@@ -33,6 +33,11 @@ services:
       # identity_server_app runs as its own separate Compose stack (see README), reachable
       # from this container via Docker Desktop's host gateway, not a shared Compose network.
       JWKS_URI: ${JWKS_URI:-http://host.docker.internal:9000/oauth2/jwks}
+      # notification_center_app: also its own separate stack, also reached via the host
+      # gateway. Optional -- escalation just logs a warning and skips delivery if unset
+      # (see NotificationClient). No safe default for the key, see README.
+      NOTIFICATION_API_URL: ${NOTIFICATION_API_URL:-http://host.docker.internal:8081}
+      NOTIFICATION_API_KEY: ${NOTIFICATION_API_KEY:-}
     ports:
       - "8080:8080"
     healthcheck:

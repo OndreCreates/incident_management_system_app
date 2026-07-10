@@ -1,7 +1,9 @@
 export type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 export type Priority = "P1" | "P2" | "P3" | "P4";
 export type Status = "CREATED" | "ASSIGNED" | "INVESTIGATING" | "MITIGATED" | "RESOLVED" | "CLOSED";
-export type EventType = "STATUS_CHANGE" | "ASSIGNMENT" | "COMMENT";
+export type EventType = "STATUS_CHANGE" | "ASSIGNMENT" | "TEAM_ASSIGNMENT" | "COMMENT";
+
+export const TERMINAL_STATUSES: Status[] = ["RESOLVED", "CLOSED"];
 
 export interface Incident {
     id: number;
@@ -11,6 +13,7 @@ export interface Incident {
     priority: Priority;
     status: Status;
     assignedUserId: string | null;
+    assignedTeamId: number | null;
     slaDeadline: string;
     slaBreached: boolean;
     rootCause: string | null;
@@ -63,6 +66,26 @@ export interface InvalidTransitionBody {
     from: Status;
     attempted: Status;
     allowed: Status[];
+}
+
+export interface Team {
+    id: number;
+    name: string;
+    memberEmails: string[];
+    createdAt: string;
+}
+
+export interface Postmortem {
+    id: number;
+    incidentId: number;
+    impact: string;
+    rootCause: string;
+    resolution: string;
+    lessonsLearned: string;
+    actionItems: string | null;
+    authorUserId: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 /** Backend's ALLOWED_TRANSITIONS map, mirrored so the UI only ever renders buttons for
