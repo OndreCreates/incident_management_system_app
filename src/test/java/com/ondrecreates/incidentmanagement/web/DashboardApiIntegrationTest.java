@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ondrecreates.incidentmanagement.domain.Incident;
 import com.ondrecreates.incidentmanagement.domain.Priority;
 import com.ondrecreates.incidentmanagement.domain.Severity;
+import com.ondrecreates.incidentmanagement.domain.Status;
 import com.ondrecreates.incidentmanagement.job.SlaBreachJob;
 import com.ondrecreates.incidentmanagement.repository.IncidentRepository;
 import java.time.Instant;
@@ -46,5 +47,27 @@ class DashboardApiIntegrationTest {
                 .andExpect(jsonPath("$.activeCount").value(2))
                 .andExpect(jsonPath("$.criticalCount").value(1))
                 .andExpect(jsonPath("$.breachedCount").value(1));
+    }
+
+    @Test
+    void analyticsReflectsResolutionTimeAndSlaCompliance() throws Exception {
+        Incident compliant = new Incident("Resolved without breach", "desc", Severity.LOW, Priority.P4,
+                Instant.now().plusSeconds(7200), Instant.now().plusSeconds(3600), "creator@example.com");
+        compliant.setStatus(Status.RESOLVED);
+        compliant.setResolvedAt(Instant.now().minusSeconds(600));
+        incidentRepository.save(compliant);
+
+        Incident breached = new Incident("Resolved after breach", "desc", Severity.LOW, Priority.P4,
+                Instant.now().minusSeconds(7200), Instant.now().minusSeconds(3600), "creator@example.com");
+        breached.setStatus(Status.RESOLVED);
+        breached.setSlaBreached(true);
+        breached.setResolvedAt(Instant.now().minusSeconds(60));
+        incidentRepository.save(breached);
+
+        mockMvc.perform(get("/api/v1/dashboard/analytics").with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.avgResolutionMinutes").isNotEmpty())
+                .andExpect(jsonPath("$.slaComplianceRate").value(50.0))
+                .andExpect(jsonPath("$.createdPerDay").isArray());
     }
 }

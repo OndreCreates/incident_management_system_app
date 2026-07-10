@@ -151,4 +151,28 @@ class IncidentApiIntegrationTest {
                 .andExpect(jsonPath("$.allowed", hasSize(1)))
                 .andExpect(jsonPath("$.allowed[0]").value("ASSIGNED"));
     }
+
+    @Test
+    void searchQueryMatchesTitleOrDescriptionCaseInsensitively() throws Exception {
+        mockMvc.perform(post("/api/v1/incidents")
+                        .with(jwt().jwt(builder -> builder.subject(CREATOR_EMAIL)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "Checkout payment gateway timeout",
+                                "severity", "HIGH", "priority", "P1"))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/v1/incidents")
+                        .with(jwt().jwt(builder -> builder.subject(CREATOR_EMAIL)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "title", "Unrelated login page glitch",
+                                "severity", "LOW", "priority", "P4"))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/incidents").param("q", "PAYMENT GATEWAY").with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].title").value("Checkout payment gateway timeout"));
+    }
 }

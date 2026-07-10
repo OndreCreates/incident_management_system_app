@@ -28,11 +28,29 @@ public final class IncidentSpecifications {
                 : cb.equal(root.get("assignedTeam").get("id"), assignedTeamId);
     }
 
+    // Case-insensitive substring match on title/description, not a real MySQL FULLTEXT
+    // MATCH...AGAINST -- at the incident volumes this portfolio app will ever hold, relevance
+    // ranking buys nothing, and a plain Specification predicate stays composable with the
+    // other filters below without a native-query escape hatch.
+    public static Specification<Incident> matchesQuery(String q) {
+        return (root, query, cb) -> {
+            if (q == null || q.isBlank()) {
+                return null;
+            }
+            String pattern = "%" + q.toLowerCase() + "%";
+            return cb.or(
+                    cb.like(cb.lower(root.get("title")), pattern),
+                    cb.like(cb.lower(root.get("description")), pattern)
+            );
+        };
+    }
+
     public static Specification<Incident> filter(Status status, Severity severity, String assignedUserId,
-                                                   Long assignedTeamId) {
+                                                   Long assignedTeamId, String q) {
         return Specification.where(hasStatus(status))
                 .and(hasSeverity(severity))
                 .and(hasAssignedUserId(assignedUserId))
-                .and(hasAssignedTeamId(assignedTeamId));
+                .and(hasAssignedTeamId(assignedTeamId))
+                .and(matchesQuery(q));
     }
 }

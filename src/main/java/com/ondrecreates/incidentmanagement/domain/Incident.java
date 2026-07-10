@@ -62,6 +62,9 @@ public class Incident {
     @Column(name = "breach_notified", nullable = false)
     private boolean breachNotified;
 
+    @Column(name = "resolved_at")
+    private Instant resolvedAt;
+
     @Column(name = "root_cause")
     private String rootCause;
 
@@ -183,6 +186,14 @@ public class Incident {
 
     public void setBreachNotified(boolean breachNotified) {
         this.breachNotified = breachNotified;
+    }
+
+    public Instant getResolvedAt() {
+        return resolvedAt;
+    }
+
+    public void setResolvedAt(Instant resolvedAt) {
+        this.resolvedAt = resolvedAt;
     }
 
     public String getRootCause() {

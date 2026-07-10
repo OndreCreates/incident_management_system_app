@@ -54,13 +54,15 @@ public class IncidentController {
     }
 
     @GetMapping
-    @Operation(summary = "List incidents", description = "Filterable by status/severity/assignedUserId, paginated.")
+    @Operation(summary = "List incidents", description = "Filterable by status/severity/assignedUserId/"
+            + "assignedTeamId, paginated. q does a case-insensitive substring search over title/description.")
     public Page<IncidentResponse> list(@RequestParam(required = false) Status status,
                                         @RequestParam(required = false) Severity severity,
                                         @RequestParam(required = false) String assignedUserId,
                                         @RequestParam(required = false) Long assignedTeamId,
+                                        @RequestParam(required = false) String q,
                                         Pageable pageable) {
-        return incidentService.listIncidents(status, severity, assignedUserId, assignedTeamId, pageable)
+        return incidentService.listIncidents(status, severity, assignedUserId, assignedTeamId, q, pageable)
                 .map(IncidentResponse::from);
     }
 

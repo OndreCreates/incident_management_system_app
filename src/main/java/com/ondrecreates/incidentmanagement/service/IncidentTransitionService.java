@@ -6,6 +6,7 @@ import com.ondrecreates.incidentmanagement.domain.Status;
 import com.ondrecreates.incidentmanagement.exception.InvalidTransitionException;
 import com.ondrecreates.incidentmanagement.repository.IncidentRepository;
 import com.ondrecreates.incidentmanagement.repository.IncidentTimelineRepository;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,13 @@ public class IncidentTransitionService {
 
         Status previous = incident.getStatus();
         incident.setStatus(target);
+        // Tracked for dashboard analytics (avg. resolution time) -- cleared on reopen so a
+        // re-resolved incident's resolution time reflects the latest resolution, not the first.
+        if (target == Status.RESOLVED) {
+            incident.setResolvedAt(Instant.now());
+        } else if (target == Status.INVESTIGATING) {
+            incident.setResolvedAt(null);
+        }
         Incident saved = incidentRepository.save(incident);
         timelineRepository.save(IncidentTimelineEntry.forStatusChange(saved, previous, target, actorUserId, note));
         return saved;

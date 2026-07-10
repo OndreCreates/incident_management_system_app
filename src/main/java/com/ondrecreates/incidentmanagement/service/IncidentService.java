@@ -4,6 +4,7 @@ import com.ondrecreates.incidentmanagement.domain.Incident;
 import com.ondrecreates.incidentmanagement.domain.IncidentComment;
 import com.ondrecreates.incidentmanagement.domain.IncidentTimelineEntry;
 import com.ondrecreates.incidentmanagement.domain.Severity;
+import com.ondrecreates.incidentmanagement.domain.SlaPolicy;
 import com.ondrecreates.incidentmanagement.domain.Status;
 import com.ondrecreates.incidentmanagement.dto.CreateIncidentRequest;
 import com.ondrecreates.incidentmanagement.exception.IncidentNotFoundException;
@@ -27,26 +28,30 @@ public class IncidentService {
     private final IncidentTransitionService transitionService;
     private final IncidentAssignmentService assignmentService;
     private final IncidentTeamAssignmentService teamAssignmentService;
+    private final SlaPolicyService slaPolicyService;
 
     public IncidentService(IncidentRepository incidentRepository,
                             IncidentTimelineRepository timelineRepository,
                             IncidentCommentRepository commentRepository,
                             IncidentTransitionService transitionService,
                             IncidentAssignmentService assignmentService,
-                            IncidentTeamAssignmentService teamAssignmentService) {
+                            IncidentTeamAssignmentService teamAssignmentService,
+                            SlaPolicyService slaPolicyService) {
         this.incidentRepository = incidentRepository;
         this.timelineRepository = timelineRepository;
         this.commentRepository = commentRepository;
         this.transitionService = transitionService;
         this.assignmentService = assignmentService;
         this.teamAssignmentService = teamAssignmentService;
+        this.slaPolicyService = slaPolicyService;
     }
 
     @Transactional
     public Incident createIncident(CreateIncidentRequest request, String createdBy) {
         Instant now = Instant.now();
-        Instant slaDeadline = now.plus(request.severity().getSlaDuration());
-        Instant nearBreachAt = now.plus(request.severity().getNearBreachDuration());
+        SlaPolicy policy = slaPolicyService.getPolicy(request.severity());
+        Instant slaDeadline = now.plus(policy.slaDuration());
+        Instant nearBreachAt = now.plus(policy.nearBreachDuration());
         Incident incident = new Incident(request.title(), request.description(), request.severity(),
                 request.priority(), slaDeadline, nearBreachAt, createdBy);
         return incidentRepository.save(incident);
@@ -57,9 +62,9 @@ public class IncidentService {
     }
 
     public Page<Incident> listIncidents(Status status, Severity severity, String assignedUserId, Long assignedTeamId,
-                                         Pageable pageable) {
+                                         String q, Pageable pageable) {
         return incidentRepository.findAll(
-                IncidentSpecifications.filter(status, severity, assignedUserId, assignedTeamId), pageable);
+                IncidentSpecifications.filter(status, severity, assignedUserId, assignedTeamId, q), pageable);
     }
 
     public List<IncidentTimelineEntry> getTimeline(Long incidentId) {
