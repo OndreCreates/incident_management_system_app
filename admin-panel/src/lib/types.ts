@@ -53,6 +53,24 @@ export interface DashboardSummary {
     breachedCount: number;
 }
 
+export interface DailyCount {
+    date: string;
+    count: number;
+}
+
+export interface DashboardAnalytics {
+    avgResolutionMinutes: number | null;
+    slaComplianceRate: number | null;
+    createdPerDay: DailyCount[];
+}
+
+export interface SlaPolicy {
+    severity: Severity;
+    slaMinutes: number;
+    nearBreachPercentage: number;
+    updatedAt: string;
+}
+
 export interface IncidentPage {
     content: Incident[];
     totalElements: number;

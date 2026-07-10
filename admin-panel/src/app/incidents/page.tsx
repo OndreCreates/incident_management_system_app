@@ -14,6 +14,7 @@ interface IncidentsPageProps {
         status?: string;
         severity?: string;
         assignedUserId?: string;
+        q?: string;
         page?: string;
     }>;
 }
@@ -25,12 +26,14 @@ export default async function IncidentsPage({ searchParams }: IncidentsPageProps
     const status = (params.status as Status | undefined) || undefined;
     const severity = (params.severity as Severity | undefined) || undefined;
     const assignedUserId = params.assignedUserId || undefined;
+    const q = params.q || undefined;
     const page = Number(params.page ?? 0) || 0;
 
     const incidentPage = await fetchIncidents(session.accessToken, {
         status,
         severity,
         assignedUserId,
+        q,
         page,
         size: PAGE_SIZE,
     });
@@ -42,6 +45,15 @@ export default async function IncidentsPage({ searchParams }: IncidentsPageProps
                 <h1 className="mb-6 text-2xl font-semibold">Incidenty</h1>
 
                 <form method="get" className="mb-6 flex flex-wrap items-end gap-4">
+                    <Field label="Hledat">
+                        <input
+                            type="text"
+                            name="q"
+                            defaultValue={q ?? ""}
+                            placeholder="titulek nebo popis…"
+                            className={selectClass}
+                        />
+                    </Field>
                     <Field label="Status">
                         <select name="status" defaultValue={status ?? ""} className={selectClass}>
                             <option value="">Všechny</option>
@@ -127,7 +139,7 @@ export default async function IncidentsPage({ searchParams }: IncidentsPageProps
                 <Pagination
                     page={incidentPage.number}
                     totalPages={incidentPage.totalPages}
-                    query={{ status, severity, assignedUserId }}
+                    query={{ status, severity, assignedUserId, q }}
                 />
             </main>
         </div>

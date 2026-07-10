@@ -1,9 +1,9 @@
 # Incident Management System
 
-Backend + admin panel pro správu incidentů: explicitní state machine, SLA sledování,
-eskalace a append-only audit trail. Třetí projekt v portfoliu — po `identity_server_app`
-(auth) a `notification_center_app` (async doručování) — demonstruje doménu **stavové
-byznys logiky a návrhu workflow**.
+Backend + admin panel pro správu incidentů: explicitní state machine, konfigurovatelné
+SLA sledování, eskalace, dashboard analytika a append-only audit trail. Třetí projekt
+v portfoliu — po `identity_server_app` (auth) a `notification_center_app` (async
+doručování) — demonstruje doménu **stavové byznys logiky a návrhu workflow**.
 
 Není to klon PagerDuty a feature parity nebyl cíl. Cílem bylo navrhnout a obhájit state
 machine s reálnými byznys pravidly (SLA, eskalace, audit trail) pod tlakem otázek na
@@ -101,9 +101,12 @@ npm run dev -- -p 3001              # admin panel na :3001
 ### Testy
 
 ```bash
-mvn test                            # 59 testů: unit (state machine matrix) + integrační (proti reálné MySQL)
+mvn test                            # 63 testů: unit (state machine matrix) + integrační (proti reálné MySQL)
 cd admin-panel && npm run build     # type-check + build všech routes
 ```
+
+CI (`.github/workflows/ci.yml`) spouští obojí na každý push/PR do `main` -- backend
+proti MySQL service kontejneru, admin panel type-check + build.
 
 ## Verifikační kroky (E2E)
 
@@ -129,9 +132,16 @@ cd admin-panel && npm run build     # type-check + build všech routes
 9. Přesuň incident do `Resolved`, vyplň postmortem formulář na jeho detailu, ověř že se
    uloží a jde upravit. Zkus vytvořit postmortem pro incident, co ještě neni terminální —
    ověř 409 `POSTMORTEM_NOT_ALLOWED`.
-10. `curl -i http://localhost:8080/api/v1/incidents` bez `Authorization` hlavičky — ověř
+10. Na `/sla-policies` uprav SLA politiku pro `LOW` (např. na 30 minut), ověř že už
+    existující incidenty s touhle severitou mají deadline nezměněný, ale nově vytvořený
+    incident dostane nový, kratší deadline.
+11. Na `/dashboard` ověř, že se zobrazí průměrná doba řešení, SLA compliance % a graf
+    vytvořených incidentů za posledních 14 dní.
+12. Na `/incidents` vyhledej podle klíčového slova z titulku/popisu (pole "Hledat") —
+    ověř že se seznam filtruje.
+13. `curl -i http://localhost:8080/api/v1/incidents` bez `Authorization` hlavičky — ověř
     401.
-11. `mvn test` — všechny testy zelené.
+14. `mvn test` — všechny testy zelené.
 
 ## Zajímavá návrhová rozhodnutí
 
@@ -157,6 +167,19 @@ cd admin-panel && npm run build     # type-check + build všech routes
 - **`NotificationClient` je rozhraní**, ne konkrétní třída. Mockito inline mock maker
   padá na JDK 25 (pozorováno na tomhle stroji) — testy nahrazují implementaci fake
   třídou místo mockování, což je navíc čistší přístup nezávisle na tomhle JDK detailu.
+- **SLA politika se čte při vytvoření, nikdy nepřepočítává.** `sla_deadline` a
+  `near_breach_at` se počítají jednou z `SlaPolicy` v momentě vytvoření incidentu a pak
+  žijou nezávisle na tabulce -- změna politiky nemá zpětný efekt na už otevřené
+  incidenty. Stejný princip jako předtím u hardcoded hodnot, jen zdroj pravdy se přesunul
+  z kódu do DB.
+- **`resolved_at` se čistí při reopenu.** `IncidentTransitionService` ho nastaví při
+  přechodu do `RESOLVED` a vynuluje při přechodu zpátky do `INVESTIGATING` -- průměrná
+  doba řešení tak vždycky odráží poslední vyřešení, ne první pokus, co byl nakonec
+  reopenutý.
+- **Hledání je `LIKE`, ne MySQL `FULLTEXT MATCH...AGAINST`.** Na objemu dat, který
+  tenhle portfolio projekt kdy bude mít, by relevance ranking nic nepřidal a stálo by to
+  composability s ostatními `Specification` filtry (native `MATCH` by vyžadovalo
+  samostatnou cestu mimo Criteria API).
 
 ## Známá omezení (záměrná, ne přehlédnutá)
 
@@ -170,9 +193,8 @@ cd admin-panel && npm run build     # type-check + build všech routes
   všechny přihlášení do `identity_server_app`, takže plný authorization_code+PKCE flow
   nejde skriptovat bez lidského TOTP kroku — pokryto manuálním ověřením výše, integrační
   testy backendu používají mockovaný JWT (`SecurityMockMvcRequestPostProcessors`).
-- **Konfigurovatelné SLA politiky** — Fáze 3, viz `ROADMAP.md` (lokální, negitovaný
-  plánovací dokument).
-
 ## Roadmapa — co dál
 
-- Fáze 3: dashboard analytika, konfigurovatelné SLA politiky, CI/CD
+Fáze 1, 2 a 3 hotové (viz `ROADMAP.md`, lokální negitovaný plánovací dokument, pro plný
+rozpad). Zbývá jen to, co bylo od začátku vědomě mimo scope portfolio projektu:
+multi-tenancy, veřejná zákaznická status stránka, webhooky pro integraci třetích stran.

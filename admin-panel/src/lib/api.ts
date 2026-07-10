@@ -1,12 +1,14 @@
 import { apiConfig } from "@/lib/config";
 import type {
     Comment,
+    DashboardAnalytics,
     DashboardSummary,
     Incident,
     IncidentDetail,
     IncidentPage,
     Postmortem,
     Severity,
+    SlaPolicy,
     Status,
     Team,
 } from "@/lib/types";
@@ -60,6 +62,7 @@ export interface IncidentFilters {
     severity?: Severity;
     assignedUserId?: string;
     assignedTeamId?: number;
+    q?: string;
     page?: number;
     size?: number;
 }
@@ -70,6 +73,7 @@ export function fetchIncidents(accessToken: string, filters: IncidentFilters): P
     if (filters.severity) params.set("severity", filters.severity);
     if (filters.assignedUserId) params.set("assignedUserId", filters.assignedUserId);
     if (filters.assignedTeamId) params.set("assignedTeamId", String(filters.assignedTeamId));
+    if (filters.q) params.set("q", filters.q);
     params.set("page", String(filters.page ?? 0));
     params.set("size", String(filters.size ?? 20));
 
@@ -82,6 +86,22 @@ export function fetchIncidentDetail(accessToken: string, id: number): Promise<In
 
 export function fetchDashboardSummary(accessToken: string): Promise<DashboardSummary> {
     return apiFetch<DashboardSummary>(accessToken, "/api/v1/dashboard/summary");
+}
+
+export function fetchDashboardAnalytics(accessToken: string): Promise<DashboardAnalytics> {
+    return apiFetch<DashboardAnalytics>(accessToken, "/api/v1/dashboard/analytics");
+}
+
+export function fetchSlaPolicies(accessToken: string): Promise<SlaPolicy[]> {
+    return apiFetch<SlaPolicy[]>(accessToken, "/api/v1/sla-policies");
+}
+
+export function updateSlaPolicy(accessToken: string, severity: Severity, slaMinutes: number,
+                                 nearBreachPercentage: number): Promise<SlaPolicy> {
+    return apiFetch<SlaPolicy>(accessToken, `/api/v1/sla-policies/${severity}`, {
+        method: "PUT",
+        body: JSON.stringify({ slaMinutes, nearBreachPercentage }),
+    });
 }
 
 export interface CreateIncidentInput {
