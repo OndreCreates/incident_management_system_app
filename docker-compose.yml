@@ -1,0 +1,22 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: incident-management-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: incident_management
+      MYSQL_USER: incident_app
+      MYSQL_PASSWORD: incident_app
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3308:3306"
+    volumes:
+      - incident-management-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  incident-management-mysql-data:

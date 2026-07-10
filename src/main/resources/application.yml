@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: incident-management-app
+
+  datasource:
+    url: jdbc:mysql://localhost:3308/incident_management
+    username: incident_app
+    password: incident_app
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

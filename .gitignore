@@ -1,0 +1,14 @@
+# interní plánovací dokumenty — nejdou do veřejného repa
+CLAUDE.md
+FAZE_1_PROMPT.md
+ROADMAP.md
+
+# Maven
+target/
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
