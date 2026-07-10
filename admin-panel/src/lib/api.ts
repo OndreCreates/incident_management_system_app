@@ -1,0 +1,115 @@
+import { apiConfig } from "@/lib/config";
+import type {
+    Comment,
+    DashboardSummary,
+    Incident,
+    IncidentDetail,
+    IncidentPage,
+    Severity,
+    Status,
+} from "@/lib/types";
+
+/** Thrown for any non-2xx backend response. Carries the parsed JSON body (when present) so
+ * callers can branch on the shape GlobalExceptionHandler (backend) actually returns --
+ * e.g. INVALID_TRANSITION's `allowed` list. */
+export class ApiError extends Error {
+    constructor(
+        public readonly status: number,
+        public readonly body: unknown,
+    ) {
+        super(`Incident API request failed with status ${status}`);
+    }
+}
+
+async function apiFetch<T>(
+    accessToken: string,
+    path: string,
+    init?: RequestInit,
+): Promise<T> {
+    const response = await fetch(new URL(path, apiConfig.baseUrl), {
+        ...init,
+        headers: {
+            ...init?.headers,
+            Authorization: `Bearer ${accessToken}`,
+            ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        },
+        cache: "no-store",
+    });
+
+    if (!response.ok) {
+        let body: unknown = null;
+        try {
+            body = await response.json();
+        } catch {
+            // Non-JSON error body (e.g. a raw 401/403 from the security filter chain) -- ApiError.body stays null.
+        }
+        throw new ApiError(response.status, body);
+    }
+
+    if (response.status === 204) {
+        return undefined as T;
+    }
+
+    return (await response.json()) as T;
+}
+
+export interface IncidentFilters {
+    status?: Status;
+    severity?: Severity;
+    assignedUserId?: string;
+    page?: number;
+    size?: number;
+}
+
+export function fetchIncidents(accessToken: string, filters: IncidentFilters): Promise<IncidentPage> {
+    const params = new URLSearchParams();
+    if (filters.status) params.set("status", filters.status);
+    if (filters.severity) params.set("severity", filters.severity);
+    if (filters.assignedUserId) params.set("assignedUserId", filters.assignedUserId);
+    params.set("page", String(filters.page ?? 0));
+    params.set("size", String(filters.size ?? 20));
+
+    return apiFetch<IncidentPage>(accessToken, `/api/v1/incidents?${params.toString()}`);
+}
+
+export function fetchIncidentDetail(accessToken: string, id: number): Promise<IncidentDetail> {
+    return apiFetch<IncidentDetail>(accessToken, `/api/v1/incidents/${id}`);
+}
+
+export function fetchDashboardSummary(accessToken: string): Promise<DashboardSummary> {
+    return apiFetch<DashboardSummary>(accessToken, "/api/v1/dashboard/summary");
+}
+
+export interface CreateIncidentInput {
+    title: string;
+    description?: string;
+    severity: Severity;
+    priority: string;
+}
+
+export function createIncident(accessToken: string, input: CreateIncidentInput): Promise<Incident> {
+    return apiFetch<Incident>(accessToken, "/api/v1/incidents", {
+        method: "POST",
+        body: JSON.stringify(input),
+    });
+}
+
+export interface TransitionInput {
+    targetStatus: Status;
+    note?: string;
+    assignedUserId?: string;
+}
+
+export function transitionIncident(accessToken: string, id: number, input: TransitionInput): Promise<Incident> {
+    return apiFetch<Incident>(accessToken, `/api/v1/incidents/${id}/transition`, {
+        method: "POST",
+        body: JSON.stringify(input),
+    });
+}
+
+export function addComment(accessToken: string, id: number, content: string): Promise<Comment> {
+    return apiFetch<Comment>(accessToken, `/api/v1/incidents/${id}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+    });
+}

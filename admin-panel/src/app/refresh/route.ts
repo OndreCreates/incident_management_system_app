@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from "next/server";
+import { publicOrigin } from "@/lib/config";
+import { refreshAccessToken, toSession } from "@/lib/oidcClient";
+import { clearSession, getSession, storeSession } from "@/lib/session";
+
+/** Only ever redirect back into this app -- never trust `next` as an absolute URL. */
+function safeNextPath(request: NextRequest): string {
+    const next = request.nextUrl.searchParams.get("next") ?? "/incidents";
+    return next.startsWith("/") && !next.startsWith("//") ? next : "/incidents";
+}
+
+export async function GET(request: NextRequest) {
+    const next = safeNextPath(request);
+    const session = await getSession();
+
+    if (!session) {
+        return NextResponse.redirect(new URL("/", publicOrigin));
+    }
+
+    try {
+        const tokens = await refreshAccessToken(session.refreshToken);
+        await storeSession(toSession(tokens, session.refreshToken));
+
+        return NextResponse.redirect(new URL(next, publicOrigin));
+    } catch (cause) {
+        await clearSession();
+        const url = new URL("/", publicOrigin);
+        url.searchParams.set(
+            "error",
+            `Refresh token už neplatí, přihlas se prosím znovu (${(cause as Error).message}).`,
+        );
+        return NextResponse.redirect(url);
+    }
+}

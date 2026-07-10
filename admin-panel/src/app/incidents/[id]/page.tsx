@@ -1,0 +1,180 @@
+import { notFound } from "next/navigation";
+import { ApiError, fetchIncidentDetail } from "@/lib/api";
+import { requireSession } from "@/lib/auth";
+import { ALLOWED_TRANSITIONS, type Status, type TimelineEntry } from "@/lib/types";
+import { Nav } from "@/components/Nav";
+import { SeverityBadge, StatusBadge, BreachedBadge } from "@/components/Badges";
+import { addCommentAction, transitionIncidentAction } from "@/app/incidents/actions";
+
+interface IncidentDetailPageProps {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ error?: string }>;
+}
+
+export default async function IncidentDetailPage({ params, searchParams }: IncidentDetailPageProps) {
+    const { id: idParam } = await params;
+    const { error } = await searchParams;
+    const id = Number(idParam);
+
+    const session = await requireSession(`/incidents/${idParam}`);
+
+    let detail;
+    try {
+        detail = await fetchIncidentDetail(session.accessToken, id);
+    } catch (cause) {
+        if (cause instanceof ApiError && cause.status === 404) {
+            notFound();
+        }
+        throw cause;
+    }
+
+    const { incident, timeline } = detail;
+    const nextStatuses = ALLOWED_TRANSITIONS[incident.status] ?? [];
+
+    return (
+        <div className="flex min-h-screen flex-col bg-gradient-to-b from-slate-950 to-slate-900 text-slate-100">
+            <Nav />
+            <main className="mx-auto grid w-full max-w-6xl flex-1 gap-8 px-6 py-10 lg:grid-cols-3">
+                <section className="lg:col-span-2 space-y-6">
+                    {error && (
+                        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="rounded-xl border border-white/10 bg-slate-900/60 p-6">
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <StatusBadge status={incident.status} />
+                            <SeverityBadge severity={incident.severity} />
+                            <span className="text-xs text-slate-500">{incident.priority}</span>
+                            {incident.slaBreached && <BreachedBadge />}
+                        </div>
+                        <h1 className="mb-2 text-2xl font-semibold">{incident.title}</h1>
+                        {incident.description && (
+                            <p className="mb-4 text-sm leading-relaxed text-slate-400">{incident.description}</p>
+                        )}
+                        <dl className="grid grid-cols-2 gap-3 text-sm">
+                            <Row label="Vytvořil" value={incident.createdBy} />
+                            <Row label="Přiřazeno" value={incident.assignedUserId ?? "—"} />
+                            <Row label="SLA deadline" value={formatDate(incident.slaDeadline)} />
+                            <Row label="Vytvořeno" value={formatDate(incident.createdAt)} />
+                            {incident.rootCause && <Row label="Root cause" value={incident.rootCause} />}
+                            {incident.resolution && <Row label="Resolution" value={incident.resolution} />}
+                        </dl>
+                    </div>
+
+                    {nextStatuses.length > 0 && (
+                        <div className="rounded-xl border border-white/10 bg-slate-900/60 p-6">
+                            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                Přechod stavu
+                            </h2>
+                            <div className="flex flex-wrap gap-4">
+                                {nextStatuses.map((status) => (
+                                    <TransitionForm key={status} incidentId={incident.id} status={status} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="rounded-xl border border-white/10 bg-slate-900/60 p-6">
+                        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                            Přidat komentář
+                        </h2>
+                        <form action={addCommentAction.bind(null, incident.id)} className="flex flex-col gap-3">
+                            <textarea
+                                name="content"
+                                required
+                                rows={3}
+                                placeholder="Co jsi zjistil/a?"
+                                className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm focus:border-red-400 focus:outline-none"
+                            />
+                            <button
+                                type="submit"
+                                className="self-start rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium hover:bg-slate-700"
+                            >
+                                Přidat komentář
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <section className="rounded-xl border border-white/10 bg-slate-900/60 p-6">
+                    <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Timeline</h2>
+                    <ol className="space-y-4">
+                        {timeline.map((entry) => (
+                            <TimelineItem key={entry.id} entry={entry} />
+                        ))}
+                        {timeline.length === 0 && <p className="text-sm text-slate-500">Zatím žádná aktivita.</p>}
+                    </ol>
+                </section>
+            </main>
+        </div>
+    );
+}
+
+function TransitionForm({ incidentId, status }: { incidentId: number; status: Status }) {
+    return (
+        <form
+            action={transitionIncidentAction.bind(null, incidentId)}
+            className="flex flex-col gap-2 rounded-lg border border-white/10 bg-slate-950/50 p-4"
+        >
+            <input type="hidden" name="targetStatus" value={status} />
+            {status === "ASSIGNED" && (
+                <input
+                    type="text"
+                    name="assignedUserId"
+                    placeholder="Přiřadit uživateli (email)"
+                    className="rounded-lg border border-white/10 bg-slate-950 px-2.5 py-1.5 text-xs focus:border-red-400 focus:outline-none"
+                />
+            )}
+            <input
+                type="text"
+                name="note"
+                placeholder="Poznámka (volitelné)"
+                className="rounded-lg border border-white/10 bg-slate-950 px-2.5 py-1.5 text-xs focus:border-red-400 focus:outline-none"
+            />
+            <button
+                type="submit"
+                className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-400"
+            >
+                → {status}
+            </button>
+        </form>
+    );
+}
+
+function TimelineItem({ entry }: { entry: TimelineEntry }) {
+    const label = (() => {
+        switch (entry.eventType) {
+            case "STATUS_CHANGE":
+                return `${entry.fromStatus} → ${entry.toStatus}`;
+            case "ASSIGNMENT":
+                return "Přiřazení";
+            case "COMMENT":
+                return "Komentář";
+        }
+    })();
+
+    return (
+        <li className="border-l-2 border-red-500/40 pl-4">
+            <p className="text-xs text-slate-500">{formatDate(entry.createdAt)}</p>
+            <p className="text-sm font-medium text-slate-200">{label}</p>
+            <p className="text-xs text-slate-400">{entry.actorUserId}</p>
+            {entry.note && <p className="mt-1 text-sm text-slate-400">{entry.note}</p>}
+            {entry.commentContent && <p className="mt-1 text-sm text-slate-300">{entry.commentContent}</p>}
+        </li>
+    );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+    return (
+        <div>
+            <dt className="text-xs text-slate-500">{label}</dt>
+            <dd className="text-slate-200">{value}</dd>
+        </div>
+    );
+}
+
+function formatDate(iso: string): string {
+    return new Date(iso).toLocaleString("cs-CZ");
+}
