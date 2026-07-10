@@ -70,4 +70,18 @@ class SecurityIntegrationTest {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void swaggerUiIsPubliclyAccessible() throws Exception {
+        // /swagger-ui.html is springdoc's own redirect entry point to /swagger-ui/index.html --
+        // distinct from the /swagger-ui/** pattern, easy to leave unlisted by accident.
+        mockMvc.perform(get("/swagger-ui.html"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void apiDocsArePubliclyAccessible() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk());
+    }
 }

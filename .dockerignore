@@ -1,0 +1,5 @@
+target/
+admin-panel/
+.git/
+.idea/
+*.md

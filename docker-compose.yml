@@ -18,5 +18,57 @@ services:
       timeout: 5s
       retries: 10
 
+  app:
+    build:
+      context: .
+    container_name: incident-management-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # Overrides application.yml's "localhost:3308" -- inside Compose's network, MySQL is
+      # reachable at the "mysql" service name on its default port, not the host-published one.
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/incident_management
+      # identity_server_app runs as its own separate Compose stack (see README), reachable
+      # from this container via Docker Desktop's host gateway, not a shared Compose network.
+      JWKS_URI: ${JWKS_URI:-http://host.docker.internal:9000/oauth2/jwks}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  admin-panel:
+    build:
+      context: ./admin-panel
+    container_name: incident-management-admin-panel
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      # Browser-facing address -- must match where the user's browser can actually reach
+      # identity_server_app (its own Compose stack, published on the host).
+      IDENTITY_SERVER_ISSUER: ${IDENTITY_SERVER_ISSUER:-http://localhost:9000}
+      # This container reaches identity_server_app via Docker Desktop's host gateway, same
+      # reasoning as the `app` service's JWKS_URI above.
+      IDENTITY_SERVER_INTERNAL_URL: ${IDENTITY_SERVER_INTERNAL_URL:-http://host.docker.internal:9000}
+      OAUTH_CLIENT_ID: incident-admin-panel
+      OAUTH_CLIENT_SECRET: ${INCIDENT_ADMIN_CLIENT_SECRET:-incident-admin-dev-secret-change-me}
+      OAUTH_REDIRECT_URI: ${INCIDENT_ADMIN_REDIRECT_URI:-http://localhost:3001/callback}
+      # Reaches the backend directly over Compose's internal network -- same project, same
+      # default bridge network, so the service name resolves without extra config.
+      INCIDENT_API_URL: http://app:8080
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://$(hostname):3001/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
 volumes:
   incident-management-mysql-data:

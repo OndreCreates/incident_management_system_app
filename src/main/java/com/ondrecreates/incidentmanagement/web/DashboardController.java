@@ -2,12 +2,17 @@ package com.ondrecreates.incidentmanagement.web;
 
 import com.ondrecreates.incidentmanagement.dto.DashboardSummaryResponse;
 import com.ondrecreates.incidentmanagement.service.DashboardService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/dashboard")
+@Tag(name = "Dashboard", description = "Operational summary counts")
+@SecurityRequirement(name = "bearerAuth")
 public class DashboardController {
 
     private final DashboardService dashboardService;
@@ -17,6 +22,8 @@ public class DashboardController {
     }
 
     @GetMapping("/summary")
+    @Operation(summary = "Get summary counts", description = "activeCount (not Resolved/Closed), "
+            + "criticalCount (active + CRITICAL severity), breachedCount (slaBreached = true).")
     public DashboardSummaryResponse summary() {
         return dashboardService.getSummary();
     }
