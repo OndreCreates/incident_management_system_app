@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +73,13 @@ public class IncidentService {
     public List<IncidentTimelineEntry> getTimeline(Long incidentId) {
         Incident incident = getIncidentOrThrow(incidentId);
         return timelineRepository.findByIncidentOrderByCreatedAtAsc(incident);
+    }
+
+    public List<Incident> exportIncidents(Status status, Severity severity, String assignedUserId,
+                                           Long assignedTeamId, String q) {
+        return incidentRepository.findAll(
+                IncidentSpecifications.filter(status, severity, assignedUserId, assignedTeamId, q),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
     @Transactional

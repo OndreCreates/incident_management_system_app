@@ -103,6 +103,12 @@ export default async function IncidentsPage({ searchParams }: IncidentsPageProps
                     >
                         Filtrovat
                     </button>
+                    <a
+                        href={exportHref({ status, severity, assignedUserId, q })}
+                        className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-white/5"
+                    >
+                        Export CSV
+                    </a>
                 </form>
 
                 <form action={bulkTransitionAction}>
@@ -216,6 +222,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
             {children}
         </label>
     );
+}
+
+function exportHref(query: Record<string, string | undefined>): string {
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+        if (value) params.set(key, value);
+    });
+    return `/incidents/export?${params.toString()}`;
 }
 
 function Pagination({

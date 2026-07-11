@@ -15,7 +15,9 @@ import com.ondrecreates.incidentmanagement.dto.IncidentResponse;
 import com.ondrecreates.incidentmanagement.dto.TimelineEntryResponse;
 import com.ondrecreates.incidentmanagement.dto.TransitionRequest;
 import com.ondrecreates.incidentmanagement.service.BulkOperationService;
+import com.ondrecreates.incidentmanagement.service.IncidentCsvExporter;
 import com.ondrecreates.incidentmanagement.service.IncidentService;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -24,7 +26,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -47,10 +52,13 @@ public class IncidentController {
 
     private final IncidentService incidentService;
     private final BulkOperationService bulkOperationService;
+    private final IncidentCsvExporter csvExporter;
 
-    public IncidentController(IncidentService incidentService, BulkOperationService bulkOperationService) {
+    public IncidentController(IncidentService incidentService, BulkOperationService bulkOperationService,
+                               IncidentCsvExporter csvExporter) {
         this.incidentService = incidentService;
         this.bulkOperationService = bulkOperationService;
+        this.csvExporter = csvExporter;
     }
 
     @PostMapping
@@ -91,6 +99,26 @@ public class IncidentController {
         Incident incident = incidentService.transition(id, request.targetStatus(), request.assignedUserId(),
                 jwt.getSubject(), request.note());
         return IncidentResponse.from(incident);
+    }
+
+    @GetMapping("/export")
+    @Operation(summary = "Export incidents as CSV", description = "Respects the same status/severity/"
+            + "assignedUserId/assignedTeamId/q filters as the list endpoint, but returns the full matching "
+            + "set (no pagination).")
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) Status status,
+                                          @RequestParam(required = false) Severity severity,
+                                          @RequestParam(required = false) String assignedUserId,
+                                          @RequestParam(required = false) Long assignedTeamId,
+                                          @RequestParam(required = false) String q) {
+        List<Incident> incidents = incidentService.exportIncidents(status, severity, assignedUserId,
+                assignedTeamId, q);
+        byte[] csv = csvExporter.toCsv(incidents).getBytes(StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename("incidents.csv").build().toString())
+                .body(csv);
     }
 
     @PostMapping("/bulk-transition")
