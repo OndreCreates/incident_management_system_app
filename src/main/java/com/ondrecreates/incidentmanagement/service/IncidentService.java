@@ -90,6 +90,12 @@ public class IncidentService {
     }
 
     @Transactional
+    public Incident assignUser(Long incidentId, String assignedUserId, String actorUserId) {
+        Incident incident = getIncidentOrThrow(incidentId);
+        return assignmentService.assign(incident, assignedUserId, actorUserId);
+    }
+
+    @Transactional
     public IncidentComment addComment(Long incidentId, String content, String authorUserId) {
         Incident incident = getIncidentOrThrow(incidentId);
         IncidentComment comment = commentRepository.save(new IncidentComment(incident, authorUserId, content));

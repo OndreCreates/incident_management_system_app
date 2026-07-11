@@ -6,6 +6,8 @@ import {
     ApiError,
     addComment,
     assignTeam,
+    bulkAssign,
+    bulkTransition,
     createIncident,
     createPostmortem,
     deleteComment,
@@ -68,6 +70,47 @@ export async function transitionIncidentAction(id: number, formData: FormData): 
     revalidatePath(`/incidents/${id}`);
     revalidatePath("/incidents");
     redirect(`/incidents/${id}`);
+}
+
+export async function bulkTransitionAction(formData: FormData): Promise<void> {
+    const accessToken = await requireFreshAccessToken();
+
+    const incidentIds = formData.getAll("incidentIds").map(Number);
+    const targetStatus = String(formData.get("bulkTargetStatus")) as Status;
+
+    if (incidentIds.length === 0) {
+        redirect(`/incidents?error=${encodeURIComponent("Vyber aspoň jeden incident.")}`);
+    }
+
+    const results = await bulkTransition(accessToken, incidentIds, targetStatus);
+    revalidatePath("/incidents");
+    redirect(`/incidents?info=${encodeURIComponent(summarize(results, `přesunuto do stavu ${targetStatus}`))}`);
+}
+
+export async function bulkAssignAction(formData: FormData): Promise<void> {
+    const accessToken = await requireFreshAccessToken();
+
+    const incidentIds = formData.getAll("incidentIds").map(Number);
+    const assignedUserId = String(formData.get("bulkAssignedUserId") ?? "").trim();
+
+    if (incidentIds.length === 0) {
+        redirect(`/incidents?error=${encodeURIComponent("Vyber aspoň jeden incident.")}`);
+    }
+    if (!assignedUserId) {
+        redirect(`/incidents?error=${encodeURIComponent("Zadej e-mail uživatele pro hromadné přiřazení.")}`);
+    }
+
+    const results = await bulkAssign(accessToken, incidentIds, assignedUserId);
+    revalidatePath("/incidents");
+    redirect(`/incidents?info=${encodeURIComponent(summarize(results, `přiřazeno uživateli ${assignedUserId}`))}`);
+}
+
+function summarize(results: { success: boolean }[], actionLabel: string): string {
+    const failed = results.filter((r) => !r.success).length;
+    const okCount = results.length - failed;
+    return failed === 0
+        ? `Úspěšně ${actionLabel}: ${okCount} incidentů.`
+        : `${actionLabel}: ${okCount} úspěšně, ${failed} selhalo (neplatná operace pro daný incident).`;
 }
 
 export async function addCommentAction(id: number, formData: FormData): Promise<void> {

@@ -4,6 +4,9 @@ import com.ondrecreates.incidentmanagement.domain.Incident;
 import com.ondrecreates.incidentmanagement.domain.Severity;
 import com.ondrecreates.incidentmanagement.domain.Status;
 import com.ondrecreates.incidentmanagement.dto.AssignTeamRequest;
+import com.ondrecreates.incidentmanagement.dto.BulkAssignRequest;
+import com.ondrecreates.incidentmanagement.dto.BulkOperationResult;
+import com.ondrecreates.incidentmanagement.dto.BulkTransitionRequest;
 import com.ondrecreates.incidentmanagement.dto.CommentRequest;
 import com.ondrecreates.incidentmanagement.dto.CommentResponse;
 import com.ondrecreates.incidentmanagement.dto.CreateIncidentRequest;
@@ -11,7 +14,9 @@ import com.ondrecreates.incidentmanagement.dto.IncidentDetailResponse;
 import com.ondrecreates.incidentmanagement.dto.IncidentResponse;
 import com.ondrecreates.incidentmanagement.dto.TimelineEntryResponse;
 import com.ondrecreates.incidentmanagement.dto.TransitionRequest;
+import com.ondrecreates.incidentmanagement.service.BulkOperationService;
 import com.ondrecreates.incidentmanagement.service.IncidentService;
+import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -41,9 +46,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class IncidentController {
 
     private final IncidentService incidentService;
+    private final BulkOperationService bulkOperationService;
 
-    public IncidentController(IncidentService incidentService) {
+    public IncidentController(IncidentService incidentService, BulkOperationService bulkOperationService) {
         this.incidentService = incidentService;
+        this.bulkOperationService = bulkOperationService;
     }
 
     @PostMapping
@@ -84,6 +91,23 @@ public class IncidentController {
         Incident incident = incidentService.transition(id, request.targetStatus(), request.assignedUserId(),
                 jwt.getSubject(), request.note());
         return IncidentResponse.from(incident);
+    }
+
+    @PostMapping("/bulk-transition")
+    @Operation(summary = "Transition many incidents at once", description = "Per-item, not all-or-nothing -- "
+            + "each incidentId gets its own success/error in the response, so a batch mixing valid and invalid "
+            + "transitions still applies the valid ones.")
+    public List<BulkOperationResult> bulkTransition(@Valid @RequestBody BulkTransitionRequest request,
+                                                      @AuthenticationPrincipal Jwt jwt) {
+        return bulkOperationService.bulkTransition(request.incidentIds(), request.targetStatus(), request.note(),
+                jwt.getSubject());
+    }
+
+    @PostMapping("/bulk-assign")
+    @Operation(summary = "Assign many incidents to one user at once", description = "Per-item, not all-or-nothing.")
+    public List<BulkOperationResult> bulkAssign(@Valid @RequestBody BulkAssignRequest request,
+                                                 @AuthenticationPrincipal Jwt jwt) {
+        return bulkOperationService.bulkAssign(request.incidentIds(), request.assignedUserId(), jwt.getSubject());
     }
 
     @PostMapping("/{id}/assign-team")

@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth";
 import type { Severity, Status } from "@/lib/types";
 import { Nav } from "@/components/Nav";
 import { SeverityBadge, StatusBadge, BreachedBadge } from "@/components/Badges";
+import { bulkAssignAction, bulkTransitionAction } from "./actions";
 
 const STATUSES: Status[] = ["CREATED", "ASSIGNED", "INVESTIGATING", "MITIGATED", "RESOLVED", "CLOSED"];
 const SEVERITIES: Severity[] = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
@@ -16,6 +17,8 @@ interface IncidentsPageProps {
         assignedUserId?: string;
         q?: string;
         page?: string;
+        error?: string;
+        info?: string;
     }>;
 }
 
@@ -43,6 +46,17 @@ export default async function IncidentsPage({ searchParams }: IncidentsPageProps
             <Nav />
             <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
                 <h1 className="mb-6 text-2xl font-semibold">Incidenty</h1>
+
+                {params.error && (
+                    <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                        {params.error}
+                    </div>
+                )}
+                {params.info && (
+                    <div className="mb-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                        {params.info}
+                    </div>
+                )}
 
                 <form method="get" className="mb-6 flex flex-wrap items-end gap-4">
                     <Field label="Hledat">
@@ -91,50 +105,96 @@ export default async function IncidentsPage({ searchParams }: IncidentsPageProps
                     </button>
                 </form>
 
-                <div className="overflow-hidden rounded-xl border border-white/10">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-900/60 text-xs uppercase tracking-wide text-slate-500">
-                            <tr>
-                                <th className="px-4 py-3">Titulek</th>
-                                <th className="px-4 py-3">Status</th>
-                                <th className="px-4 py-3">Severity</th>
-                                <th className="px-4 py-3">Priorita</th>
-                                <th className="px-4 py-3">Přiřazeno</th>
-                                <th className="px-4 py-3">SLA</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {incidentPage.content.map((incident) => (
-                                <tr key={incident.id} className="hover:bg-white/5">
-                                    <td className="px-4 py-3">
-                                        <Link
-                                            href={`/incidents/${incident.id}`}
-                                            className="font-medium text-slate-100 hover:text-red-300"
-                                        >
-                                            {incident.title}
-                                        </Link>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <StatusBadge status={incident.status} />
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <SeverityBadge severity={incident.severity} />
-                                    </td>
-                                    <td className="px-4 py-3 text-slate-400">{incident.priority}</td>
-                                    <td className="px-4 py-3 text-slate-400">{incident.assignedUserId ?? "—"}</td>
-                                    <td className="px-4 py-3">{incident.slaBreached && <BreachedBadge />}</td>
-                                </tr>
-                            ))}
-                            {incidentPage.content.length === 0 && (
+                <form action={bulkTransitionAction}>
+                    <div className="mb-3 flex flex-wrap items-end gap-3 rounded-xl border border-white/10 bg-slate-900/40 px-4 py-3">
+                        <span className="text-xs uppercase tracking-wide text-slate-500">Hromadná akce pro vybrané:</span>
+                        <Field label="Přejít do stavu">
+                            <select name="bulkTargetStatus" defaultValue="ASSIGNED" className={selectClass}>
+                                {STATUSES.map((s) => (
+                                    <option key={s} value={s}>
+                                        {s}
+                                    </option>
+                                ))}
+                            </select>
+                        </Field>
+                        <button
+                            type="submit"
+                            formAction={bulkTransitionAction}
+                            className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
+                        >
+                            Přejít do stavu
+                        </button>
+                        <Field label="Přiřadit uživateli (e-mail)">
+                            <input
+                                type="text"
+                                name="bulkAssignedUserId"
+                                placeholder="uzivatel@example.com"
+                                className={selectClass}
+                            />
+                        </Field>
+                        <button
+                            type="submit"
+                            formAction={bulkAssignAction}
+                            className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
+                        >
+                            Hromadně přiřadit
+                        </button>
+                    </div>
+
+                    <div className="overflow-hidden rounded-xl border border-white/10">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-900/60 text-xs uppercase tracking-wide text-slate-500">
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-10 text-center text-slate-500">
-                                        Žádné incidenty neodpovídají filtru.
-                                    </td>
+                                    <th className="px-4 py-3"></th>
+                                    <th className="px-4 py-3">Titulek</th>
+                                    <th className="px-4 py-3">Status</th>
+                                    <th className="px-4 py-3">Severity</th>
+                                    <th className="px-4 py-3">Priorita</th>
+                                    <th className="px-4 py-3">Přiřazeno</th>
+                                    <th className="px-4 py-3">SLA</th>
                                 </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {incidentPage.content.map((incident) => (
+                                    <tr key={incident.id} className="hover:bg-white/5">
+                                        <td className="px-4 py-3">
+                                            <input
+                                                type="checkbox"
+                                                name="incidentIds"
+                                                value={incident.id}
+                                                className="h-4 w-4 rounded border-white/20 bg-slate-900"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <Link
+                                                href={`/incidents/${incident.id}`}
+                                                className="font-medium text-slate-100 hover:text-red-300"
+                                            >
+                                                {incident.title}
+                                            </Link>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <StatusBadge status={incident.status} />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <SeverityBadge severity={incident.severity} />
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-400">{incident.priority}</td>
+                                        <td className="px-4 py-3 text-slate-400">{incident.assignedUserId ?? "—"}</td>
+                                        <td className="px-4 py-3">{incident.slaBreached && <BreachedBadge />}</td>
+                                    </tr>
+                                ))}
+                                {incidentPage.content.length === 0 && (
+                                    <tr>
+                                        <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
+                                            Žádné incidenty neodpovídají filtru.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
 
                 <Pagination
                     page={incidentPage.number}

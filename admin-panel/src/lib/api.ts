@@ -1,5 +1,6 @@
 import { apiConfig } from "@/lib/config";
 import type {
+    BulkOperationResult,
     Comment,
     DashboardAnalytics,
     DashboardSummary,
@@ -149,6 +150,22 @@ export function editComment(accessToken: string, incidentId: number, commentId: 
 export function deleteComment(accessToken: string, incidentId: number, commentId: number): Promise<void> {
     return apiFetch<void>(accessToken, `/api/v1/incidents/${incidentId}/comments/${commentId}`, {
         method: "DELETE",
+    });
+}
+
+export function bulkTransition(accessToken: string, incidentIds: number[], targetStatus: Status,
+                                 note?: string): Promise<BulkOperationResult[]> {
+    return apiFetch<BulkOperationResult[]>(accessToken, "/api/v1/incidents/bulk-transition", {
+        method: "POST",
+        body: JSON.stringify({ incidentIds, targetStatus, note }),
+    });
+}
+
+export function bulkAssign(accessToken: string, incidentIds: number[],
+                            assignedUserId: string): Promise<BulkOperationResult[]> {
+    return apiFetch<BulkOperationResult[]>(accessToken, "/api/v1/incidents/bulk-assign", {
+        method: "POST",
+        body: JSON.stringify({ incidentIds, assignedUserId }),
     });
 }
 

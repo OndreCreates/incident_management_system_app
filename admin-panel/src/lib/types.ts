@@ -98,6 +98,12 @@ export interface Team {
     createdAt: string;
 }
 
+export interface BulkOperationResult {
+    incidentId: number;
+    success: boolean;
+    error: string | null;
+}
+
 export interface Postmortem {
     id: number;
     incidentId: number;
