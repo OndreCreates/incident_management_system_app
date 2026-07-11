@@ -11,6 +11,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Table(name = "incident_comment")
@@ -30,9 +31,19 @@ public class IncidentComment {
     @Column(nullable = false)
     private String content;
 
+    @Column(nullable = false)
+    private boolean edited;
+
+    @Column(nullable = false)
+    private boolean deleted;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
 
     protected IncidentComment() {
         // JPA
@@ -42,6 +53,17 @@ public class IncidentComment {
         this.incident = incident;
         this.authorUserId = authorUserId;
         this.content = content;
+    }
+
+    public void edit(String newContent) {
+        this.content = newContent;
+        this.edited = true;
+    }
+
+    /** Soft delete -- incident_timeline.comment_id keeps pointing at this row (see
+     * V8__editable_comments.sql for why a hard delete isn't an option). */
+    public void softDelete() {
+        this.deleted = true;
     }
 
     public Long getId() {
@@ -60,7 +82,19 @@ public class IncidentComment {
         return content;
     }
 
+    public boolean isEdited() {
+        return edited;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 }

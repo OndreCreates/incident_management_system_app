@@ -138,6 +138,20 @@ export function addComment(accessToken: string, id: number, content: string): Pr
     });
 }
 
+export function editComment(accessToken: string, incidentId: number, commentId: number,
+                             content: string): Promise<Comment> {
+    return apiFetch<Comment>(accessToken, `/api/v1/incidents/${incidentId}/comments/${commentId}`, {
+        method: "PUT",
+        body: JSON.stringify({ content }),
+    });
+}
+
+export function deleteComment(accessToken: string, incidentId: number, commentId: number): Promise<void> {
+    return apiFetch<void>(accessToken, `/api/v1/incidents/${incidentId}/comments/${commentId}`, {
+        method: "DELETE",
+    });
+}
+
 export function assignTeam(accessToken: string, incidentId: number, teamId: number): Promise<Incident> {
     return apiFetch<Incident>(accessToken, `/api/v1/incidents/${incidentId}/assign-team`, {
         method: "POST",

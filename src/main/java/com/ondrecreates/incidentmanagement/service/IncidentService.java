@@ -7,6 +7,8 @@ import com.ondrecreates.incidentmanagement.domain.Severity;
 import com.ondrecreates.incidentmanagement.domain.SlaPolicy;
 import com.ondrecreates.incidentmanagement.domain.Status;
 import com.ondrecreates.incidentmanagement.dto.CreateIncidentRequest;
+import com.ondrecreates.incidentmanagement.exception.CommentAuthorMismatchException;
+import com.ondrecreates.incidentmanagement.exception.CommentNotFoundException;
 import com.ondrecreates.incidentmanagement.exception.IncidentNotFoundException;
 import com.ondrecreates.incidentmanagement.repository.IncidentCommentRepository;
 import com.ondrecreates.incidentmanagement.repository.IncidentRepository;
@@ -93,5 +95,36 @@ public class IncidentService {
         IncidentComment comment = commentRepository.save(new IncidentComment(incident, authorUserId, content));
         timelineRepository.save(IncidentTimelineEntry.forComment(incident, comment, authorUserId));
         return comment;
+    }
+
+    @Transactional
+    public IncidentComment editComment(Long incidentId, Long commentId, String newContent, String actorUserId) {
+        IncidentComment comment = getCommentOrThrow(incidentId, commentId);
+        requireAuthor(comment, actorUserId);
+        comment.edit(newContent);
+        return commentRepository.save(comment);
+    }
+
+    @Transactional
+    public void deleteComment(Long incidentId, Long commentId, String actorUserId) {
+        IncidentComment comment = getCommentOrThrow(incidentId, commentId);
+        requireAuthor(comment, actorUserId);
+        comment.softDelete();
+        commentRepository.save(comment);
+    }
+
+    private IncidentComment getCommentOrThrow(Long incidentId, Long commentId) {
+        IncidentComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException(commentId));
+        if (!comment.getIncident().getId().equals(incidentId)) {
+            throw new CommentNotFoundException(commentId);
+        }
+        return comment;
+    }
+
+    private void requireAuthor(IncidentComment comment, String actorUserId) {
+        if (!comment.getAuthorUserId().equals(actorUserId)) {
+            throw new CommentAuthorMismatchException(comment.getId());
+        }
     }
 }

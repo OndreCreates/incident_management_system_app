@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { ApiError, fetchIncidentDetail, fetchPostmortem, fetchTeam, fetchTeams } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
+import { verifyIdToken } from "@/lib/verifyIdToken";
 import { ALLOWED_TRANSITIONS, TERMINAL_STATUSES, type Postmortem, type Status, type Team,
     type TimelineEntry } from "@/lib/types";
 import { Nav } from "@/components/Nav";
@@ -9,6 +10,8 @@ import {
     addCommentAction,
     assignTeamAction,
     createPostmortemAction,
+    deleteCommentAction,
+    editCommentAction,
     transitionIncidentAction,
     updatePostmortemAction,
 } from "@/app/incidents/actions";
@@ -38,6 +41,7 @@ export default async function IncidentDetailPage({ params, searchParams }: Incid
     const { incident, timeline } = detail;
     const nextStatuses = ALLOWED_TRANSITIONS[incident.status] ?? [];
     const isTerminal = TERMINAL_STATUSES.includes(incident.status);
+    const currentUserEmail = (await verifyIdToken(session.idToken)).sub as string;
 
     const [teams, assignedTeam, postmortem] = await Promise.all([
         fetchTeams(session.accessToken),
@@ -151,7 +155,12 @@ export default async function IncidentDetailPage({ params, searchParams }: Incid
                     <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Timeline</h2>
                     <ol className="space-y-4">
                         {timeline.map((entry) => (
-                            <TimelineItem key={entry.id} entry={entry} />
+                            <TimelineItem
+                                key={entry.id}
+                                entry={entry}
+                                incidentId={incident.id}
+                                currentUserEmail={currentUserEmail}
+                            />
                         ))}
                         {timeline.length === 0 && <p className="text-sm text-slate-500">Zatím žádná aktivita.</p>}
                     </ol>
@@ -261,7 +270,15 @@ function TransitionForm({ incidentId, status }: { incidentId: number; status: St
     );
 }
 
-function TimelineItem({ entry }: { entry: TimelineEntry }) {
+function TimelineItem({
+    entry,
+    incidentId,
+    currentUserEmail,
+}: {
+    entry: TimelineEntry;
+    incidentId: number;
+    currentUserEmail: string;
+}) {
     const label = (() => {
         switch (entry.eventType) {
             case "STATUS_CHANGE":
@@ -275,13 +292,51 @@ function TimelineItem({ entry }: { entry: TimelineEntry }) {
         }
     })();
 
+    const isOwnComment = entry.eventType === "COMMENT" && entry.commentId !== null
+        && entry.actorUserId === currentUserEmail && !entry.commentDeleted;
+
     return (
         <li className="border-l-2 border-red-500/40 pl-4">
             <p className="text-xs text-slate-500">{formatDate(entry.createdAt)}</p>
             <p className="text-sm font-medium text-slate-200">{label}</p>
             <p className="text-xs text-slate-400">{entry.actorUserId}</p>
             {entry.note && <p className="mt-1 text-sm text-slate-400">{entry.note}</p>}
-            {entry.commentContent && <p className="mt-1 text-sm text-slate-300">{entry.commentContent}</p>}
+            {entry.commentDeleted && <p className="mt-1 text-sm italic text-slate-600">[komentář smazán]</p>}
+            {!entry.commentDeleted && entry.commentContent && (
+                <p className="mt-1 text-sm text-slate-300">
+                    {entry.commentContent}
+                    {entry.commentEdited && <span className="ml-2 text-xs text-slate-600">(upraveno)</span>}
+                </p>
+            )}
+            {isOwnComment && (
+                <div className="mt-2 flex items-center gap-4">
+                    <details className="text-xs">
+                        <summary className="cursor-pointer text-slate-500 hover:text-slate-300">Upravit</summary>
+                        <form
+                            action={editCommentAction.bind(null, incidentId, entry.commentId as number)}
+                            className="mt-2 flex flex-col gap-2"
+                        >
+                            <textarea
+                                name="content"
+                                defaultValue={entry.commentContent ?? ""}
+                                rows={2}
+                                className="rounded-lg border border-white/10 bg-slate-950 px-2.5 py-1.5 text-xs focus:border-red-400 focus:outline-none"
+                            />
+                            <button
+                                type="submit"
+                                className="self-start rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium hover:bg-slate-700"
+                            >
+                                Uložit
+                            </button>
+                        </form>
+                    </details>
+                    <form action={deleteCommentAction.bind(null, incidentId, entry.commentId as number)}>
+                        <button type="submit" className="text-xs text-red-400 hover:text-red-300">
+                            Smazat
+                        </button>
+                    </form>
+                </div>
+            )}
         </li>
     );
 }

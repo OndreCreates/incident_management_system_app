@@ -7,11 +7,15 @@ public record CommentResponse(
         Long id,
         String authorUserId,
         String content,
-        Instant createdAt
+        boolean edited,
+        boolean deleted,
+        Instant createdAt,
+        Instant updatedAt
 ) {
 
     public static CommentResponse from(IncidentComment comment) {
-        return new CommentResponse(comment.getId(), comment.getAuthorUserId(), comment.getContent(),
-                comment.getCreatedAt());
+        return new CommentResponse(comment.getId(), comment.getAuthorUserId(),
+                comment.isDeleted() ? null : comment.getContent(), comment.isEdited(), comment.isDeleted(),
+                comment.getCreatedAt(), comment.getUpdatedAt());
     }
 }

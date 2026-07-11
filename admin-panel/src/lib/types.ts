@@ -30,6 +30,8 @@ export interface TimelineEntry {
     toStatus: Status | null;
     commentId: number | null;
     commentContent: string | null;
+    commentEdited: boolean;
+    commentDeleted: boolean;
     actorUserId: string;
     note: string | null;
     createdAt: string;
@@ -43,8 +45,11 @@ export interface IncidentDetail {
 export interface Comment {
     id: number;
     authorUserId: string;
-    content: string;
+    content: string | null;
+    edited: boolean;
+    deleted: boolean;
     createdAt: string;
+    updatedAt: string;
 }
 
 export interface DashboardSummary {

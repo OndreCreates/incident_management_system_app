@@ -1,5 +1,7 @@
 package com.ondrecreates.incidentmanagement.web;
 
+import com.ondrecreates.incidentmanagement.exception.CommentAuthorMismatchException;
+import com.ondrecreates.incidentmanagement.exception.CommentNotFoundException;
 import com.ondrecreates.incidentmanagement.exception.IncidentNotFoundException;
 import com.ondrecreates.incidentmanagement.exception.InvalidTransitionException;
 import com.ondrecreates.incidentmanagement.exception.PostmortemAlreadyExistsException;
@@ -66,6 +68,22 @@ public class GlobalExceptionHandler {
         body.put("error", "POSTMORTEM_ALREADY_EXISTS");
         body.put("message", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    @ExceptionHandler(CommentNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleCommentNotFound(CommentNotFoundException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", "COMMENT_NOT_FOUND");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(CommentAuthorMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleCommentAuthorMismatch(CommentAuthorMismatchException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", "COMMENT_AUTHOR_MISMATCH");
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

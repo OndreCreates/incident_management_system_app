@@ -23,9 +23,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -98,6 +100,26 @@ public class IncidentController {
     public CommentResponse addComment(@PathVariable Long id, @Valid @RequestBody CommentRequest request,
                                        @AuthenticationPrincipal Jwt jwt) {
         return CommentResponse.from(incidentService.addComment(id, request.content(), jwt.getSubject()));
+    }
+
+    @PutMapping("/{id}/comments/{commentId}")
+    @Operation(summary = "Edit a comment", description = "Only the original author can edit it. Marks the "
+            + "comment as edited; the timeline entry's timestamp/actor still reflect the original post.")
+    @ApiResponse(responseCode = "403", description = "Not the comment's author")
+    public CommentResponse editComment(@PathVariable Long id, @PathVariable Long commentId,
+                                        @Valid @RequestBody CommentRequest request,
+                                        @AuthenticationPrincipal Jwt jwt) {
+        return CommentResponse.from(incidentService.editComment(id, commentId, request.content(), jwt.getSubject()));
+    }
+
+    @DeleteMapping("/{id}/comments/{commentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete a comment", description = "Only the original author can delete it. Soft delete -- "
+            + "the timeline entry still exists, its content is just hidden (append-only audit trail).")
+    @ApiResponse(responseCode = "403", description = "Not the comment's author")
+    public void deleteComment(@PathVariable Long id, @PathVariable Long commentId,
+                               @AuthenticationPrincipal Jwt jwt) {
+        incidentService.deleteComment(id, commentId, jwt.getSubject());
     }
 
     @GetMapping("/{id}/timeline")

@@ -8,6 +8,8 @@ import {
     assignTeam,
     createIncident,
     createPostmortem,
+    deleteComment,
+    editComment,
     transitionIncident,
     updatePostmortem,
 } from "@/lib/api";
@@ -78,6 +80,27 @@ export async function addCommentAction(id: number, formData: FormData): Promise<
 
     revalidatePath(`/incidents/${id}`);
     redirect(`/incidents/${id}`);
+}
+
+export async function editCommentAction(incidentId: number, commentId: number, formData: FormData): Promise<void> {
+    const accessToken = await requireFreshAccessToken();
+
+    const content = String(formData.get("content") ?? "").trim();
+    if (content) {
+        await editComment(accessToken, incidentId, commentId, content);
+    }
+
+    revalidatePath(`/incidents/${incidentId}`);
+    redirect(`/incidents/${incidentId}`);
+}
+
+export async function deleteCommentAction(incidentId: number, commentId: number): Promise<void> {
+    const accessToken = await requireFreshAccessToken();
+
+    await deleteComment(accessToken, incidentId, commentId);
+
+    revalidatePath(`/incidents/${incidentId}`);
+    redirect(`/incidents/${incidentId}`);
 }
 
 export async function assignTeamAction(id: number, formData: FormData): Promise<void> {
