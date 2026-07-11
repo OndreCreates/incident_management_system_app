@@ -14,6 +14,10 @@ under interview-style questioning -- not to build as many features as possible.
 
 ## Screenshots
 
+| Admin panel -- landing | Login (`identity_server_app`) | API (Swagger UI) |
+| --- | --- | --- |
+| ![Admin panel landing](docs/screenshots/landing.png) | ![identity_server_app login page](docs/screenshots/identity-login.png) | ![Swagger UI](docs/screenshots/swagger.png) |
+
 The screens behind login (incident list, detail, dashboard) require an OAuth2/PKCE login
 through `identity_server_app` with mandatory MFA, so they can't be captured
 automatically without the second factor for the seed account. See step 2 in

@@ -13,6 +13,10 @@ pohovoru — ne postavit co nejvíc featur.
 
 ## Screenshoty
 
+| Admin panel -- landing | Login (`identity_server_app`) | API (Swagger UI) |
+| --- | --- | --- |
+| ![Admin panel landing](docs/screenshots/landing.png) | ![Login stránka identity_server_app](docs/screenshots/identity-login.png) | ![Swagger UI](docs/screenshots/swagger.png) |
+
 Obrazovky za přihlášením (seznam incidentů, detail, dashboard) vyžadují OAuth2/PKCE login
 přes `identity_server_app` s vynuceným MFA, takže je nejde automatizovaně vyfotit bez
 druhého faktoru u seed účtu. Viz krok 2 ve [Verifikačních krocích](#verifikační-kroky-e2e)
