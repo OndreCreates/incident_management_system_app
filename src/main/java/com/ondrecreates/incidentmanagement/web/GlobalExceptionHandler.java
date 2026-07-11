@@ -1,13 +1,7 @@
 package com.ondrecreates.incidentmanagement.web;
 
-import com.ondrecreates.incidentmanagement.exception.CommentAuthorMismatchException;
-import com.ondrecreates.incidentmanagement.exception.CommentNotFoundException;
-import com.ondrecreates.incidentmanagement.exception.IncidentNotFoundException;
+import com.ondrecreates.incidentmanagement.exception.ApiException;
 import com.ondrecreates.incidentmanagement.exception.InvalidTransitionException;
-import com.ondrecreates.incidentmanagement.exception.PostmortemAlreadyExistsException;
-import com.ondrecreates.incidentmanagement.exception.PostmortemNotAllowedException;
-import com.ondrecreates.incidentmanagement.exception.PostmortemNotFoundException;
-import com.ondrecreates.incidentmanagement.exception.TeamNotFoundException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -30,60 +24,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
-    @ExceptionHandler(IncidentNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleIncidentNotFound(IncidentNotFoundException ex) {
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<Map<String, Object>> handleApiException(ApiException ex) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("error", "INCIDENT_NOT_FOUND");
+        body.put("error", ex.errorCode());
         body.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
-    }
-
-    @ExceptionHandler(TeamNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleTeamNotFound(TeamNotFoundException ex) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("error", "TEAM_NOT_FOUND");
-        body.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
-    }
-
-    @ExceptionHandler(PostmortemNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handlePostmortemNotFound(PostmortemNotFoundException ex) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("error", "POSTMORTEM_NOT_FOUND");
-        body.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
-    }
-
-    @ExceptionHandler(PostmortemNotAllowedException.class)
-    public ResponseEntity<Map<String, Object>> handlePostmortemNotAllowed(PostmortemNotAllowedException ex) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("error", "POSTMORTEM_NOT_ALLOWED");
-        body.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
-    }
-
-    @ExceptionHandler(PostmortemAlreadyExistsException.class)
-    public ResponseEntity<Map<String, Object>> handlePostmortemAlreadyExists(PostmortemAlreadyExistsException ex) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("error", "POSTMORTEM_ALREADY_EXISTS");
-        body.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
-    }
-
-    @ExceptionHandler(CommentNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleCommentNotFound(CommentNotFoundException ex) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("error", "COMMENT_NOT_FOUND");
-        body.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
-    }
-
-    @ExceptionHandler(CommentAuthorMismatchException.class)
-    public ResponseEntity<Map<String, Object>> handleCommentAuthorMismatch(CommentAuthorMismatchException ex) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("error", "COMMENT_AUTHOR_MISMATCH");
-        body.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+        return ResponseEntity.status(ex.status()).body(body);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
