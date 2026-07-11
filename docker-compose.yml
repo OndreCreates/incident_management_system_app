@@ -49,6 +49,14 @@ services:
   admin-panel:
     build:
       context: ./admin-panel
+      args:
+        # Browser connects to notification_center_app directly (see NotificationToasts) --
+        # baked into the client bundle at build time, so these are build args, not runtime
+        # env (see admin-panel/Dockerfile). Empty by default: the toast feature just stays
+        # off. NOTIFICATION_WS_CLIENT_ID must be the id of the SAME client whose API key
+        # the `app` service uses as NOTIFICATION_API_KEY above.
+        NOTIFICATION_WS_URL: ${NOTIFICATION_WS_URL:-}
+        NOTIFICATION_CLIENT_ID: ${NOTIFICATION_WS_CLIENT_ID:-}
     container_name: incident-management-admin-panel
     restart: unless-stopped
     depends_on:

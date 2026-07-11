@@ -32,19 +32,28 @@ public class RestNotificationClient implements NotificationClient {
 
     @Override
     public void sendEmail(String recipient, String subject, String body) {
+        send("EMAIL", recipient, subject, body);
+    }
+
+    @Override
+    public void sendWebSocket(String recipient, String subject, String body) {
+        send("WEBSOCKET", recipient, subject, body);
+    }
+
+    private void send(String channel, String recipient, String subject, String body) {
         if (!configured) {
-            log.warn("notification.api-key not configured -- skipping escalation email to {}", recipient);
+            log.warn("notification.api-key not configured -- skipping {} notification to {}", channel, recipient);
             return;
         }
         try {
             restClient.post()
                     .uri("/api/v1/notifications")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new NotificationRequest("EMAIL", recipient, subject, body))
+                    .body(new NotificationRequest(channel, recipient, subject, body))
                     .retrieve()
                     .toBodilessEntity();
         } catch (RestClientException ex) {
-            log.warn("Failed to send escalation email to {}: {}", recipient, ex.getMessage());
+            log.warn("Failed to send {} notification to {}: {}", channel, recipient, ex.getMessage());
         }
     }
 

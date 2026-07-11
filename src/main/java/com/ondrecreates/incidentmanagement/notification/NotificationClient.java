@@ -12,4 +12,8 @@ package com.ondrecreates.incidentmanagement.notification;
 public interface NotificationClient {
 
     void sendEmail(String recipient, String subject, String body);
+
+    /** Live push to the admin panel via notification_center_app's WEBSOCKET channel --
+     * best-effort, same posture as sendEmail: never fatal if the recipient isn't connected. */
+    void sendWebSocket(String recipient, String subject, String body);
 }

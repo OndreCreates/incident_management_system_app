@@ -74,6 +74,7 @@ public class EscalationJob {
     private void notifyRecipients(Incident incident, String subject, String body) {
         for (String recipient : resolveRecipients(incident)) {
             notificationClient.sendEmail(recipient, subject, body);
+            notificationClient.sendWebSocket(recipient, subject, body);
         }
     }
 

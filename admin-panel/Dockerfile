@@ -7,15 +7,25 @@ RUN npm ci
 # builder: needs dummy build-time env values -- Next.js executes route/page modules while
 # tracing the standalone build, and lib/config.ts throws if these are unset. The real values
 # are supplied at container run time via docker-compose; nothing here is baked into the output.
+#
+# NEXT_PUBLIC_* vars are the one exception: Next.js inlines them into the client bundle at
+# `next build` time, so unlike the server-only vars above they can't be supplied at container
+# run time -- they have to come in as build ARGs (see docker-compose.yml's admin-panel
+# build.args). Empty by default, which just disables the NotificationToasts feature (same
+# "optional infrastructure" posture as escalation email).
 FROM node:22-alpine AS builder
 WORKDIR /app
+ARG NOTIFICATION_WS_URL=""
+ARG NOTIFICATION_CLIENT_ID=""
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV IDENTITY_SERVER_ISSUER=http://localhost:9000 \
     OAUTH_CLIENT_ID=incident-admin-panel \
     OAUTH_CLIENT_SECRET=build-placeholder \
     OAUTH_REDIRECT_URI=http://localhost:3001/callback \
-    INCIDENT_API_URL=http://localhost:8080
+    INCIDENT_API_URL=http://localhost:8080 \
+    NEXT_PUBLIC_NOTIFICATION_WS_URL=$NOTIFICATION_WS_URL \
+    NEXT_PUBLIC_NOTIFICATION_CLIENT_ID=$NOTIFICATION_CLIENT_ID
 RUN npm run build
 
 # runner: just the standalone server output + static assets, no source or node_modules.

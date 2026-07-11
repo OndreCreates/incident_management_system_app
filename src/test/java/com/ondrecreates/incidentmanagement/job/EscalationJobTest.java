@@ -54,6 +54,7 @@ class EscalationJobTest {
         // Spring caches the ApplicationContext (and this singleton bean) across test
         // methods -- without this, recipients from a previous test would leak in.
         notificationClient.recipients().clear();
+        notificationClient.webSocketRecipients().clear();
     }
 
     @Test
@@ -113,6 +114,18 @@ class EscalationJobTest {
     }
 
     @Test
+    void nearBreachAlsoSendsWebSocketNotification() {
+        Incident incident = new Incident("DB latency creeping up", "desc", Severity.CRITICAL, Priority.P1,
+                Instant.now().plusSeconds(3600), Instant.now().minusSeconds(60), "creator@example.com");
+        incident.setAssignedUserId("responder@example.com");
+        incidentRepository.save(incident);
+
+        escalationJob.detectNearBreaches();
+
+        assertThat(notificationClient.webSocketRecipients()).containsExactly("responder@example.com");
+    }
+
+    @Test
     void breachEscalationNotifiesAndMarksNotifiedExactlyOnce() {
         Incident incident = new Incident("DB connection pool exhausted", "desc", Severity.CRITICAL, Priority.P1,
                 Instant.now().minusSeconds(3600), Instant.now().minusSeconds(7200), "creator@example.com");
@@ -130,14 +143,24 @@ class EscalationJobTest {
 
     static class FakeNotificationClient implements NotificationClient {
         private final List<String> recipients = new ArrayList<>();
+        private final List<String> webSocketRecipients = new ArrayList<>();
 
         @Override
         public void sendEmail(String recipient, String subject, String body) {
             recipients.add(recipient);
         }
 
+        @Override
+        public void sendWebSocket(String recipient, String subject, String body) {
+            webSocketRecipients.add(recipient);
+        }
+
         List<String> recipients() {
             return recipients;
+        }
+
+        List<String> webSocketRecipients() {
+            return webSocketRecipients;
         }
     }
 
