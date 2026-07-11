@@ -1,5 +1,7 @@
 # Incident Management System
 
+*[English version](README.en.md)*
+
 Backend + admin panel pro správu incidentů: explicitní state machine, konfigurovatelné
 SLA sledování, eskalace, dashboard analytika a append-only audit trail. Třetí projekt
 v portfoliu — po `identity_server_app` (auth) a `notification_center_app` (async
@@ -8,6 +10,44 @@ doručování) — demonstruje doménu **stavové byznys logiky a návrhu workfl
 Není to klon PagerDuty a feature parity nebyl cíl. Cílem bylo navrhnout a obhájit state
 machine s reálnými byznys pravidly (SLA, eskalace, audit trail) pod tlakem otázek na
 pohovoru — ne postavit co nejvíc featur.
+
+## Screenshoty
+
+Obrazovky za přihlášením (seznam incidentů, detail, dashboard) vyžadují OAuth2/PKCE login
+přes `identity_server_app` s vynuceným MFA, takže je nejde automatizovaně vyfotit bez
+druhého faktoru u seed účtu. Viz krok 2 ve [Verifikačních krocích](#verifikační-kroky-e2e)
+níž pro manuální ověření celého flow -- screenshoty do `docs/screenshots/` může kdokoliv
+s přístupem k druhému faktoru doplnit stejným postupem.
+
+## Co appka umí
+
+- **Incidenty**: CRUD, explicitní state machine o 6 stavech (`Created → Assigned →
+  Investigating → Mitigated → Resolved → Closed`, s reopen větví zpátky do
+  `Investigating`), append-only timeline/audit trail ke každému incidentu.
+- **Filtrování a hledání**: podle statusu, severity, přiřazeného uživatele/týmu,
+  case-insensitive fulltextové hledání v titulku/popisu, stránkování.
+- **Konfigurovatelné SLA**: politika (SLA okno + near-breach práh) nastavitelná per
+  severity na `/sla-policies`, bez redeploye. Scheduled job hlídá breach/near-breach a
+  sklápí příznaky na incidentu.
+- **Eskalace** (near-breach i breach): e-mail přes `notification_center_app` a živý
+  in-app toast přes WebSocket (STOMP) do admin panelu -- oba kanály best-effort, appka
+  nikdy nespadne kvůli nedostupné notifikační službě.
+- **Týmy**: CRUD, správa členů, routing incidentu na tým jako nezávislý audit fakt vedle
+  individuálního přiřazení.
+- **Komentáře**: přidání, editace a mazání (soft-delete -- timeline zůstává, obsah se jen
+  skryje) -- jen původní autor.
+- **Hromadné akce**: bulk přechod stavu a bulk přiřazení nad vybranými incidenty najednou,
+  per-item výsledek (dávka s mixem platných/neplatných operací aplikuje ty platné, ne
+  všechno nebo nic).
+- **CSV export** incidentů respektující aktuálně nastavené filtry.
+- **Postmortem**: create/update formulář, jen pro incidenty v terminálním stavu
+  (Resolved/Closed).
+- **Dashboard**: KPI (aktivní/critical/breached count), průměrná doba řešení, SLA
+  compliance %, graf počtu vytvořených incidentů za posledních 14 dní.
+- **Auth**: OAuth2 Authorization Code + PKCE přes `identity_server_app`, JWT validace
+  proti JWKS, MFA vynucené pro všechny uživatele.
+- **CI/CD**: GitHub Actions na každý push/PR (backend testy proti reálné MySQL,
+  frontend type-check + build), Docker Compose deployment.
 
 ## Architektura
 
@@ -86,6 +126,14 @@ curl -X POST http://localhost:8081/api/v1/admin/clients \
 Zkopíruj vrácený `apiKey` do `NOTIFICATION_API_KEY` (viz `application.yml` /
 docker-compose env).
 
+Pro živé in-app WebSocket notifikace v admin panelu (toast při near-breach/breach
+eskalaci) navíc nastav `NOTIFICATION_WS_URL` (browser-facing adresa
+`notification_center_app`, např. `ws://localhost:8081/ws`) a `NOTIFICATION_WS_CLIENT_ID`
+(id klienta vráceného výše -- musí odpovídat tomu, čí `apiKey` je v `NOTIFICATION_API_KEY`).
+Bez nich se funkce jen tiše vypne, stejná "optional infrastructure" pozice jako eskalační
+e-mail. Pozor: jde o build args (viz `admin-panel/Dockerfile`), takže po změně je potřeba
+`docker compose up -d --build admin-panel`, ne jen restart kontejneru.
+
 ### Bez Dockeru (lokální vývoj)
 
 ```bash
@@ -101,7 +149,7 @@ npm run dev -- -p 3001              # admin panel na :3001
 ### Testy
 
 ```bash
-mvn test                            # 63 testů: unit (state machine matrix) + integrační (proti reálné MySQL)
+mvn test                            # 72 testů: unit (state machine matrix) + integrační (proti reálné MySQL)
 cd admin-panel && npm run build     # type-check + build všech routes
 ```
 
@@ -139,9 +187,19 @@ proti MySQL service kontejneru, admin panel type-check + build.
     vytvořených incidentů za posledních 14 dní.
 12. Na `/incidents` vyhledej podle klíčového slova z titulku/popisu (pole "Hledat") —
     ověř že se seznam filtruje.
-13. `curl -i http://localhost:8080/api/v1/incidents` bez `Authorization` hlavičky — ověř
+13. Uprav vlastní komentář (inline edit), pak ho smaž — ověř že v timeline zůstane
+    záznam, jen s textem `[komentář smazán]`.
+14. Na `/incidents` zaškrtni dva incidenty, spusť hromadný přechod stavu na kombinaci kde
+    jeden z nich přechod nedovoluje — ověř že se aplikuje jen ten platný a druhý nahlásí
+    chybu ve stejné odpovědi.
+15. Na `/incidents` klikni "Export CSV" (případně s nastaveným filtrem) — ověř že se
+    stáhne `incidents.csv` odpovídající aktuálnímu filtru.
+16. S nastaveným `NOTIFICATION_WS_URL`/`NOTIFICATION_WS_CLIENT_ID`: vyvolej near-breach
+    nebo breach eskalaci (viz krok 5/8) a ověř, že se v admin panelu objeví toast
+    notifikace bez nutnosti obnovit stránku.
+17. `curl -i http://localhost:8080/api/v1/incidents` bez `Authorization` hlavičky — ověř
     401.
-14. `mvn test` — všechny testy zelené.
+18. `mvn test` — všechny testy zelené.
 
 ## Zajímavá návrhová rozhodnutí
 
@@ -180,6 +238,21 @@ proti MySQL service kontejneru, admin panel type-check + build.
   tenhle portfolio projekt kdy bude mít, by relevance ranking nic nepřidal a stálo by to
   composability s ostatními `Specification` filtry (native `MATCH` by vyžadovalo
   samostatnou cestu mimo Criteria API).
+- **`BulkOperationService` je záměrně samostatný bean**, ne metoda uvnitř
+  `IncidentService`. Bulk endpointy jsou per-item, ne all-or-nothing -- jedna neplatná
+  položka v dávce nesmí rollbacknout ty úspěšné vedle ní. Volání `IncidentService`'s
+  `@Transactional` metod z JINÉHO beanu prochází reálným Spring proxy a dostane vlastní
+  transakci za položku; volání ze stejné třídy (self-invokace) by proxy obešlo a celá
+  dávka by sdílela jednu transakci.
+- **In-app notifikace se posílají přímo z prohlížeče do `notification_center_app`**, ne
+  přes tenhle backend jako proxy. STOMP topic (`/topic/notifications/{clientId}`) je
+  scoped na `notification_center_app`'s client id, ne na konkrétního uživatele -- ověřeno
+  naživo (viz `NotificationToasts`), ne odhadem ze zdrojáků.
+- **`ApiException` je společný abstraktní základ** pro doménové výjimky mapované na
+  `{error, message}` JSON (`IncidentNotFoundException`, `CommentAuthorMismatchException`
+  atd.) -- `GlobalExceptionHandler` má jeden `@ExceptionHandler` místo jednoho na typ.
+  `InvalidTransitionException` zůstává mimo, protože její tělo má navíc
+  `from`/`attempted`/`allowed`.
 
 ## Známá omezení (záměrná, ne přehlédnutá)
 
@@ -193,8 +266,11 @@ proti MySQL service kontejneru, admin panel type-check + build.
   všechny přihlášení do `identity_server_app`, takže plný authorization_code+PKCE flow
   nejde skriptovat bez lidského TOTP kroku — pokryto manuálním ověřením výše, integrační
   testy backendu používají mockovaný JWT (`SecurityMockMvcRequestPostProcessors`).
+
 ## Roadmapa — co dál
 
-Fáze 1, 2 a 3 hotové (viz `ROADMAP.md`, lokální negitovaný plánovací dokument, pro plný
-rozpad). Zbývá jen to, co bylo od začátku vědomě mimo scope portfolio projektu:
-multi-tenancy, veřejná zákaznická status stránka, webhooky pro integraci třetích stran.
+Fáze 1, 2 a 3 a čtyři "quick-win" vylepšení (editace/mazání komentářů, hromadné akce, CSV
+export, in-app WebSocket notifikace) hotové (viz `ROADMAP.md`, lokální negitovaný
+plánovací dokument, pro plný rozpad). Zbývá jen to, co bylo od začátku vědomě mimo scope
+portfolio projektu: multi-tenancy, veřejná zákaznická status stránka, webhooky pro
+integraci třetích stran.
