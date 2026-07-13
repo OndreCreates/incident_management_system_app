@@ -10,9 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ondrecreates.incidentmanagement.domain.AppUserRole;
+import com.ondrecreates.incidentmanagement.domain.Role;
+import com.ondrecreates.incidentmanagement.repository.AppUserRoleRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -32,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 class SlaPolicyApiIntegrationTest {
 
     private static final String ACTOR_EMAIL = "admin@example.com";
+    private static final String MEMBER_EMAIL = "member@example.com";
 
     @Autowired
     private MockMvc mockMvc;
@@ -39,11 +44,29 @@ class SlaPolicyApiIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private AppUserRoleRepository roleRepository;
+
+    @BeforeEach
+    void seedAdmin() {
+        roleRepository.save(new AppUserRole(ACTOR_EMAIL, Role.ADMIN));
+    }
+
     @Test
     void listReturnsAllFourSeverityPolicies() throws Exception {
         mockMvc.perform(get("/api/v1/sla-policies").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(4)));
+    }
+
+    @Test
+    void nonAdminCannotUpdatePolicy() throws Exception {
+        mockMvc.perform(put("/api/v1/sla-policies/LOW")
+                        .with(jwt().jwt(builder -> builder.subject(MEMBER_EMAIL)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("slaMinutes", 30, "nearBreachPercentage", 80))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("ROLE_FORBIDDEN"));
     }
 
     @Test

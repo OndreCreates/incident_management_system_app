@@ -52,6 +52,9 @@ manually -- anyone with access to the second factor can add screenshots to
   compliance %, a chart of incidents created over the last 14 days.
 - **Auth**: OAuth2 Authorization Code + PKCE via `identity_server_app`, JWT validation
   against JWKS, MFA mandatory for every user.
+- **Authorization (RBAC)**: ADMIN/MEMBER roles, a local table rather than a JWT claim
+  (see below). Org-wide actions (SLA policies, bulk operations) are ADMIN only; MEMBER
+  gets the full day-to-day workflow (incidents, comments, assignment).
 - **CI/CD**: GitHub Actions on every push/PR (backend tests against a real MySQL,
   frontend type-check + build), Docker Compose deployment.
 
@@ -156,7 +159,7 @@ npm run dev -- -p 3001              # admin panel on :3001
 ### Tests
 
 ```bash
-mvn test                            # 72 tests: unit (state machine matrix) + integration (against real MySQL)
+mvn test                            # 76 tests: unit (state machine matrix) + integration (against real MySQL)
 cd admin-panel && npm run build     # type-check + build of every route
 ```
 
@@ -263,6 +266,13 @@ MySQL service container, admin panel type-check + build.
   etc.) -- `GlobalExceptionHandler` has one `@ExceptionHandler` instead of one per type.
   `InvalidTransitionException` stays separate since its body has extra
   `from`/`attempted`/`allowed` fields.
+- **Roles live in our own `app_user_role` table, not a JWT claim.**
+  `identity_server_app` issues no role information in its tokens today, and adding one
+  would mean changing a different portfolio project. `AuthorizationService.roleOf(email)`
+  returns `MEMBER` as a safe default for anyone with no row -- MEMBER gets the full
+  day-to-day workflow, ADMIN additionally gets org-wide actions (SLA policies, bulk
+  operations). `GET /api/v1/me` lets the admin panel know the role without decoding the
+  token itself.
 
 ## Known limitations (deliberate, not overlooked)
 

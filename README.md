@@ -50,6 +50,9 @@ s přístupem k druhému faktoru doplnit stejným postupem.
   compliance %, graf počtu vytvořených incidentů za posledních 14 dní.
 - **Auth**: OAuth2 Authorization Code + PKCE přes `identity_server_app`, JWT validace
   proti JWKS, MFA vynucené pro všechny uživatele.
+- **Autorizace (RBAC)**: role ADMIN/MEMBER, vlastní tabulka místo JWT claimu (viz níž).
+  Org-wide akce (SLA politiky, hromadné operace) jen pro ADMIN, MEMBER má plný běžný
+  workflow (incidenty, komentáře, přiřazení).
 - **CI/CD**: GitHub Actions na každý push/PR (backend testy proti reálné MySQL,
   frontend type-check + build), Docker Compose deployment.
 
@@ -153,7 +156,7 @@ npm run dev -- -p 3001              # admin panel na :3001
 ### Testy
 
 ```bash
-mvn test                            # 72 testů: unit (state machine matrix) + integrační (proti reálné MySQL)
+mvn test                            # 76 testů: unit (state machine matrix) + integrační (proti reálné MySQL)
 cd admin-panel && npm run build     # type-check + build všech routes
 ```
 
@@ -257,6 +260,12 @@ proti MySQL service kontejneru, admin panel type-check + build.
   atd.) -- `GlobalExceptionHandler` má jeden `@ExceptionHandler` místo jednoho na typ.
   `InvalidTransitionException` zůstává mimo, protože její tělo má navíc
   `from`/`attempted`/`allowed`.
+- **Role žijí ve vlastní `app_user_role` tabulce, ne v JWT claimu.** `identity_server_app`
+  dnes nevydává žádnou informaci o roli v tokenu, a přidání by znamenalo zásah do jiného
+  portfolio projektu. `AuthorizationService.roleOf(email)` vrací `MEMBER` jako bezpečný
+  default pro kohokoliv bez řádku -- MEMBER má plný běžný workflow, ADMIN navíc org-wide
+  akce (SLA politiky, hromadné operace). `GET /api/v1/me` dává admin panelu vědět roli
+  bez nutnosti dekódovat token.
 
 ## Známá omezení (záměrná, ne přehlédnutá)
 

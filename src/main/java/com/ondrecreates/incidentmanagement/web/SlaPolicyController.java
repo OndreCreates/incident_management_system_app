@@ -5,10 +5,13 @@ import com.ondrecreates.incidentmanagement.dto.SlaPolicyResponse;
 import com.ondrecreates.incidentmanagement.dto.UpdateSlaPolicyRequest;
 import com.ondrecreates.incidentmanagement.service.SlaPolicyService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -35,10 +38,12 @@ public class SlaPolicyController {
     }
 
     @PutMapping("/{severity}")
-    @Operation(summary = "Update an SLA policy", description = "Only affects incidents created after the update -- "
-            + "already-open incidents keep their originally computed deadline.")
-    public SlaPolicyResponse update(@PathVariable Severity severity, @Valid @RequestBody UpdateSlaPolicyRequest request) {
-        return SlaPolicyResponse.from(
-                slaPolicyService.updatePolicy(severity, request.slaMinutes(), request.nearBreachPercentage()));
+    @Operation(summary = "Update an SLA policy", description = "ADMIN only. Only affects incidents created after "
+            + "the update -- already-open incidents keep their originally computed deadline.")
+    @ApiResponse(responseCode = "403", description = "Caller is not an ADMIN")
+    public SlaPolicyResponse update(@PathVariable Severity severity, @Valid @RequestBody UpdateSlaPolicyRequest request,
+                                     @AuthenticationPrincipal Jwt jwt) {
+        return SlaPolicyResponse.from(slaPolicyService.updatePolicy(severity, request.slaMinutes(),
+                request.nearBreachPercentage(), jwt.getSubject()));
     }
 }

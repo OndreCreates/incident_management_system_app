@@ -8,8 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ondrecreates.incidentmanagement.domain.AppUserRole;
+import com.ondrecreates.incidentmanagement.domain.Role;
+import com.ondrecreates.incidentmanagement.repository.AppUserRoleRepository;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -21,7 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Quick-win acceptance: bulk endpoints are per-item, not all-or-nothing --
  * a batch mixing a valid and an invalid transition still applies the valid
- * one and reports the invalid one's failure individually.
+ * one and reports the invalid one's failure individually. ADMIN only (see
+ * AuthorizationService) -- ACTOR_EMAIL is seeded as ADMIN in @BeforeEach.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -29,12 +34,38 @@ import org.springframework.transaction.annotation.Transactional;
 class BulkOperationApiIntegrationTest {
 
     private static final String ACTOR_EMAIL = "actor@example.com";
+    private static final String MEMBER_EMAIL = "member@example.com";
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private AppUserRoleRepository roleRepository;
+
+    @BeforeEach
+    void seedAdmin() {
+        roleRepository.save(new AppUserRole(ACTOR_EMAIL, Role.ADMIN));
+    }
+
+    @Test
+    void nonAdminCannotBulkTransition() throws Exception {
+        Long incidentId = createIncident();
+
+        Map<String, Object> request = Map.of(
+                "incidentIds", List.of(incidentId),
+                "targetStatus", "ASSIGNED"
+        );
+
+        mockMvc.perform(post("/api/v1/incidents/bulk-transition")
+                        .with(jwt().jwt(builder -> builder.subject(MEMBER_EMAIL)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("ROLE_FORBIDDEN"));
+    }
 
     @Test
     void bulkTransitionAppliesValidItemsAndReportsInvalidOnesIndividually() throws Exception {

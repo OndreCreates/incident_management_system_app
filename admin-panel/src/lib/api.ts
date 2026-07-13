@@ -7,6 +7,7 @@ import type {
     Incident,
     IncidentDetail,
     IncidentPage,
+    Me,
     Postmortem,
     Severity,
     SlaPolicy,
@@ -83,6 +84,10 @@ export function fetchIncidents(accessToken: string, filters: IncidentFilters): P
 
 export function fetchIncidentDetail(accessToken: string, id: number): Promise<IncidentDetail> {
     return apiFetch<IncidentDetail>(accessToken, `/api/v1/incidents/${id}`);
+}
+
+export function fetchMe(accessToken: string): Promise<Me> {
+    return apiFetch<Me>(accessToken, "/api/v1/me");
 }
 
 export function fetchDashboardSummary(accessToken: string): Promise<DashboardSummary> {

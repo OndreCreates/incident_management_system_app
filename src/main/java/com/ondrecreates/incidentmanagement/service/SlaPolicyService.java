@@ -17,9 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class SlaPolicyService {
 
     private final SlaPolicyRepository slaPolicyRepository;
+    private final AuthorizationService authorizationService;
 
-    public SlaPolicyService(SlaPolicyRepository slaPolicyRepository) {
+    public SlaPolicyService(SlaPolicyRepository slaPolicyRepository, AuthorizationService authorizationService) {
         this.slaPolicyRepository = slaPolicyRepository;
+        this.authorizationService = authorizationService;
     }
 
     public SlaPolicy getPolicy(Severity severity) {
@@ -31,8 +33,11 @@ public class SlaPolicyService {
         return slaPolicyRepository.findAll();
     }
 
+    // Org-wide setting, not per-incident -- ADMIN only, unlike the day-to-day incident
+    // workflow (create/transition/comment) which any authenticated MEMBER can do.
     @Transactional
-    public SlaPolicy updatePolicy(Severity severity, int slaMinutes, int nearBreachPercentage) {
+    public SlaPolicy updatePolicy(Severity severity, int slaMinutes, int nearBreachPercentage, String actorUserId) {
+        authorizationService.requireAdmin(actorUserId);
         SlaPolicy policy = getPolicy(severity);
         policy.update(slaMinutes, nearBreachPercentage);
         return slaPolicyRepository.save(policy);

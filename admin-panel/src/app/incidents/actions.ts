@@ -82,7 +82,9 @@ export async function bulkTransitionAction(formData: FormData): Promise<void> {
         redirect(`/incidents?error=${encodeURIComponent("Vyber aspoň jeden incident.")}`);
     }
 
-    const results = await bulkTransition(accessToken, incidentIds, targetStatus);
+    const results = await bulkTransition(accessToken, incidentIds, targetStatus).catch((cause) =>
+        handleBulkAuthError(cause),
+    );
     revalidatePath("/incidents");
     redirect(`/incidents?info=${encodeURIComponent(summarize(results, `přesunuto do stavu ${targetStatus}`))}`);
 }
@@ -100,9 +102,20 @@ export async function bulkAssignAction(formData: FormData): Promise<void> {
         redirect(`/incidents?error=${encodeURIComponent("Zadej e-mail uživatele pro hromadné přiřazení.")}`);
     }
 
-    const results = await bulkAssign(accessToken, incidentIds, assignedUserId);
+    const results = await bulkAssign(accessToken, incidentIds, assignedUserId).catch((cause) =>
+        handleBulkAuthError(cause),
+    );
     revalidatePath("/incidents");
     redirect(`/incidents?info=${encodeURIComponent(summarize(results, `přiřazeno uživateli ${assignedUserId}`))}`);
+}
+
+// Belt-and-suspenders: the UI already hides the bulk toolbar for non-admins, but the
+// endpoint itself is still the actual authority (see AuthorizationService, backend).
+function handleBulkAuthError(cause: unknown): never {
+    if (cause instanceof ApiError && cause.status === 403) {
+        redirect(`/incidents?error=${encodeURIComponent("Jen ADMIN může spouštět hromadné akce.")}`);
+    }
+    throw cause;
 }
 
 function summarize(results: { success: boolean }[], actionLabel: string): string {
