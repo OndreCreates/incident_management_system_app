@@ -267,6 +267,10 @@ proti MySQL service kontejneru, admin panel type-check + build.
   default pro kohokoliv bez řádku -- MEMBER má plný běžný workflow, ADMIN navíc org-wide
   akce (SLA politiky, hromadné operace). `GET /api/v1/me` dává admin panelu vědět roli
   bez nutnosti dekódovat token.
+- **CSV export streamuje přes `StreamingResponseBody`**, nestaví celý dokument jako
+  String/`byte[]` napřed. Incidenty se pořád načtou z DB naráz jedním dotazem (na
+  objemu dat týhle appky by DB-cursor streaming byl zbytečná komplikace), ale samotné
+  psaní do HTTP response se děje řádek po řádku bez extra kopie v paměti.
 
 ## Známá omezení (záměrná, ne přehlédnutá)
 

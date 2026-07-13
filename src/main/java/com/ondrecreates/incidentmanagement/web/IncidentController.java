@@ -22,7 +22,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +42,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
 @RequestMapping("/api/v1/incidents")
@@ -104,21 +104,21 @@ public class IncidentController {
     @GetMapping("/export")
     @Operation(summary = "Export incidents as CSV", description = "Respects the same status/severity/"
             + "assignedUserId/assignedTeamId/q filters as the list endpoint, but returns the full matching "
-            + "set (no pagination).")
-    public ResponseEntity<byte[]> export(@RequestParam(required = false) Status status,
-                                          @RequestParam(required = false) Severity severity,
-                                          @RequestParam(required = false) String assignedUserId,
-                                          @RequestParam(required = false) Long assignedTeamId,
-                                          @RequestParam(required = false) String q) {
+            + "set (no pagination). Streamed straight to the response body, not buffered in memory first.")
+    public ResponseEntity<StreamingResponseBody> export(@RequestParam(required = false) Status status,
+                                                          @RequestParam(required = false) Severity severity,
+                                                          @RequestParam(required = false) String assignedUserId,
+                                                          @RequestParam(required = false) Long assignedTeamId,
+                                                          @RequestParam(required = false) String q) {
         List<Incident> incidents = incidentService.exportIncidents(status, severity, assignedUserId,
                 assignedTeamId, q);
-        byte[] csv = csvExporter.toCsv(incidents).getBytes(StandardCharsets.UTF_8);
+        StreamingResponseBody body = out -> csvExporter.writeCsv(incidents, out);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename("incidents.csv").build().toString())
-                .body(csv);
+                .body(body);
     }
 
     @PostMapping("/bulk-transition")

@@ -274,6 +274,10 @@ MySQL service container, admin panel type-check + build.
   day-to-day workflow, ADMIN additionally gets org-wide actions (SLA policies, bulk
   operations). `GET /api/v1/me` lets the admin panel know the role without decoding the
   token itself.
+- **CSV export streams via `StreamingResponseBody`** instead of building the whole
+  document as a String/`byte[]` first. Incidents still get fetched from the DB in one
+  query (a DB-cursor stream would be needless complexity at this app's data volumes),
+  but writing to the HTTP response happens row by row without an extra in-memory copy.
 
 ## Known limitations (deliberate, not overlooked)
 

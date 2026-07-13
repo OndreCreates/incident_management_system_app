@@ -2,9 +2,11 @@ package com.ondrecreates.incidentmanagement.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,11 +17,14 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Quick-win acceptance: CSV export respects the same filters as the list
- * endpoint and returns the full matching set, unpaginated.
+ * endpoint and returns the full matching set, unpaginated. Streamed via
+ * StreamingResponseBody, so the request goes through Spring MVC's async
+ * dispatch -- MockMvc needs asyncDispatch() to follow it through to completion.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -39,7 +44,11 @@ class IncidentExportApiIntegrationTest {
         createIncident("CSV export target incident", "CRITICAL", "P1");
         createIncident("Unrelated incident", "LOW", "P4");
 
-        String csv = mockMvc.perform(get("/api/v1/incidents/export").param("q", "CSV export").with(jwt()))
+        MvcResult asyncResult = mockMvc.perform(get("/api/v1/incidents/export").param("q", "CSV export").with(jwt()))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        String csv = mockMvc.perform(asyncDispatch(asyncResult))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "text/csv;charset=UTF-8"))
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"incidents.csv\""))

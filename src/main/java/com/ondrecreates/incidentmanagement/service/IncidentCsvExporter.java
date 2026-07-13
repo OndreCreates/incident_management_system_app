@@ -1,10 +1,21 @@
 package com.ondrecreates.incidentmanagement.service;
 
 import com.ondrecreates.incidentmanagement.domain.Incident;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
-/** Kept separate from IncidentService -- CSV formatting is a presentation concern, not a domain one. */
+/**
+ * Kept separate from IncidentService -- CSV formatting is a presentation concern, not a
+ * domain one. Writes straight to the response's OutputStream row by row instead of
+ * building the whole document as a String first -- that extra copy (and the byte[] copy
+ * after it) is pure overhead once the caller's only going to write it out anyway.
+ */
 @Component
 public class IncidentCsvExporter {
 
@@ -13,35 +24,37 @@ public class IncidentCsvExporter {
             "slaDeadline", "slaBreached", "createdBy", "createdAt", "updatedAt",
     };
 
-    public String toCsv(List<Incident> incidents) {
-        StringBuilder csv = new StringBuilder();
-        writeRow(csv, HEADER);
-        for (Incident incident : incidents) {
-            writeRow(csv,
-                    String.valueOf(incident.getId()),
-                    incident.getTitle(),
-                    incident.getStatus().name(),
-                    incident.getSeverity().name(),
-                    incident.getPriority().name(),
-                    incident.getAssignedUserId(),
-                    incident.getAssignedTeam() != null ? String.valueOf(incident.getAssignedTeam().getId()) : "",
-                    String.valueOf(incident.getSlaDeadline()),
-                    String.valueOf(incident.isSlaBreached()),
-                    incident.getCreatedBy(),
-                    String.valueOf(incident.getCreatedAt()),
-                    String.valueOf(incident.getUpdatedAt()));
+    public void writeCsv(List<Incident> incidents, OutputStream out) {
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+            writeRow(writer, HEADER);
+            for (Incident incident : incidents) {
+                writeRow(writer,
+                        String.valueOf(incident.getId()),
+                        incident.getTitle(),
+                        incident.getStatus().name(),
+                        incident.getSeverity().name(),
+                        incident.getPriority().name(),
+                        incident.getAssignedUserId(),
+                        incident.getAssignedTeam() != null ? String.valueOf(incident.getAssignedTeam().getId()) : "",
+                        String.valueOf(incident.getSlaDeadline()),
+                        String.valueOf(incident.isSlaBreached()),
+                        incident.getCreatedBy(),
+                        String.valueOf(incident.getCreatedAt()),
+                        String.valueOf(incident.getUpdatedAt()));
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
-        return csv.toString();
     }
 
-    private void writeRow(StringBuilder csv, String... fields) {
+    private void writeRow(BufferedWriter writer, String... fields) throws IOException {
         for (int i = 0; i < fields.length; i++) {
             if (i > 0) {
-                csv.append(',');
+                writer.write(',');
             }
-            csv.append(escape(fields[i]));
+            writer.write(escape(fields[i]));
         }
-        csv.append("\r\n");
+        writer.write("\r\n");
     }
 
     private String escape(String value) {
