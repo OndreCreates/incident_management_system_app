@@ -70,6 +70,32 @@ class SlaPolicyApiIntegrationTest {
     }
 
     @Test
+    void updatingPolicyRecordsAuditChange() throws Exception {
+        String beforePolicy = mockMvc.perform(get("/api/v1/sla-policies").with(jwt()))
+                .andReturn().getResponse().getContentAsString();
+        int originalSlaMinutes = 0;
+        for (var node : objectMapper.readTree(beforePolicy)) {
+            if (node.get("severity").asText().equals("HIGH")) {
+                originalSlaMinutes = node.get("slaMinutes").asInt();
+            }
+        }
+
+        mockMvc.perform(put("/api/v1/sla-policies/HIGH")
+                        .with(jwt().jwt(builder -> builder.subject(ACTOR_EMAIL)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("slaMinutes", 90, "nearBreachPercentage", 75))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/sla-policies/history").with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].severity").value("HIGH"))
+                .andExpect(jsonPath("$[0].oldSlaMinutes").value(originalSlaMinutes))
+                .andExpect(jsonPath("$[0].newSlaMinutes").value(90))
+                .andExpect(jsonPath("$[0].newNearBreachPercentage").value(75))
+                .andExpect(jsonPath("$[0].changedBy").value(ACTOR_EMAIL));
+    }
+
+    @Test
     void updatingPolicyAffectsOnlyIncidentsCreatedAfterwards() throws Exception {
         Long existingIncidentId = createIncident();
         String beforeUpdate = fetchIncidentJson(existingIncidentId);

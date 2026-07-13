@@ -1,4 +1,4 @@
-import { fetchMe, fetchSlaPolicies } from "@/lib/api";
+import { fetchMe, fetchSlaPolicies, fetchSlaPolicyHistory } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
 import { Nav } from "@/components/Nav";
 import { updateSlaPolicyAction } from "@/app/sla-policies/actions";
@@ -10,9 +10,10 @@ interface SlaPoliciesPageProps {
 export default async function SlaPoliciesPage({ searchParams }: SlaPoliciesPageProps) {
     const session = await requireSession("/sla-policies");
     const { error } = await searchParams;
-    const [policies, me] = await Promise.all([
+    const [policies, me, history] = await Promise.all([
         fetchSlaPolicies(session.accessToken),
         fetchMe(session.accessToken),
+        fetchSlaPolicyHistory(session.accessToken),
     ]);
     const isAdmin = me.role === "ADMIN";
 
@@ -94,6 +95,45 @@ export default async function SlaPoliciesPage({ searchParams }: SlaPoliciesPageP
                             </div>
                         ),
                     )}
+                </div>
+
+                <h2 className="mb-3 mt-10 text-lg font-semibold">Historie změn</h2>
+                <div className="overflow-hidden rounded-xl border border-white/10">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-900/60 text-xs uppercase tracking-wide text-slate-500">
+                            <tr>
+                                <th className="px-4 py-3">Kdy</th>
+                                <th className="px-4 py-3">Severity</th>
+                                <th className="px-4 py-3">SLA (min)</th>
+                                <th className="px-4 py-3">Near-breach %</th>
+                                <th className="px-4 py-3">Kdo</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {history.map((change) => (
+                                <tr key={change.id}>
+                                    <td className="px-4 py-3 text-slate-400">
+                                        {new Date(change.changedAt).toLocaleString("cs-CZ")}
+                                    </td>
+                                    <td className="px-4 py-3">{change.severity}</td>
+                                    <td className="px-4 py-3 text-slate-300">
+                                        {change.oldSlaMinutes} → {change.newSlaMinutes}
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-300">
+                                        {change.oldNearBreachPercentage} → {change.newNearBreachPercentage}
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-400">{change.changedBy}</td>
+                                </tr>
+                            ))}
+                            {history.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                                        Zatím žádná změna.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </main>
         </div>

@@ -76,6 +76,17 @@ export interface SlaPolicy {
     updatedAt: string;
 }
 
+export interface SlaPolicyChange {
+    id: number;
+    severity: Severity;
+    oldSlaMinutes: number;
+    oldNearBreachPercentage: number;
+    newSlaMinutes: number;
+    newNearBreachPercentage: number;
+    changedBy: string;
+    changedAt: string;
+}
+
 /** Role lives in our own app_user_role table, not a JWT claim -- see AuthorizationService (backend). */
 export type Role = "ADMIN" | "MEMBER";
 

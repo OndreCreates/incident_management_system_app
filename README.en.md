@@ -34,7 +34,8 @@ manually -- anyone with access to the second factor can add screenshots to
   full-text search over title/description, pagination.
 - **Configurable SLA**: policy (SLA window + near-breach threshold) adjustable per
   severity at `/sla-policies`, no redeploy needed. A scheduled job watches for
-  breach/near-breach and flips the flags on the incident.
+  breach/near-breach and flips the flags on the incident. An append-only audit log
+  (who/when/from what to what) tracks every change.
 - **Escalation** (near-breach and breach): email via `notification_center_app` and a
   live in-app toast over WebSocket (STOMP) in the admin panel -- both channels
   best-effort, the app never goes down because the notification service is unreachable.
@@ -159,7 +160,7 @@ npm run dev -- -p 3001              # admin panel on :3001
 ### Tests
 
 ```bash
-mvn test                            # 76 tests: unit (state machine matrix) + integration (against real MySQL)
+mvn test                            # 77 tests: unit (state machine matrix) + integration (against real MySQL)
 cd admin-panel && npm run build     # type-check + build of every route
 ```
 

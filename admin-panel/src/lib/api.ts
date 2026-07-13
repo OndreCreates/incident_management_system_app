@@ -11,6 +11,7 @@ import type {
     Postmortem,
     Severity,
     SlaPolicy,
+    SlaPolicyChange,
     Status,
     Team,
 } from "@/lib/types";
@@ -100,6 +101,10 @@ export function fetchDashboardAnalytics(accessToken: string): Promise<DashboardA
 
 export function fetchSlaPolicies(accessToken: string): Promise<SlaPolicy[]> {
     return apiFetch<SlaPolicy[]>(accessToken, "/api/v1/sla-policies");
+}
+
+export function fetchSlaPolicyHistory(accessToken: string): Promise<SlaPolicyChange[]> {
+    return apiFetch<SlaPolicyChange[]>(accessToken, "/api/v1/sla-policies/history");
 }
 
 export function updateSlaPolicy(accessToken: string, severity: Severity, slaMinutes: number,

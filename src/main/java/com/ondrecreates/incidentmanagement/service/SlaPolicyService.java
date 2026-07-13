@@ -2,6 +2,8 @@ package com.ondrecreates.incidentmanagement.service;
 
 import com.ondrecreates.incidentmanagement.domain.Severity;
 import com.ondrecreates.incidentmanagement.domain.SlaPolicy;
+import com.ondrecreates.incidentmanagement.domain.SlaPolicyChange;
+import com.ondrecreates.incidentmanagement.repository.SlaPolicyChangeRepository;
 import com.ondrecreates.incidentmanagement.repository.SlaPolicyRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -17,10 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class SlaPolicyService {
 
     private final SlaPolicyRepository slaPolicyRepository;
+    private final SlaPolicyChangeRepository slaPolicyChangeRepository;
     private final AuthorizationService authorizationService;
 
-    public SlaPolicyService(SlaPolicyRepository slaPolicyRepository, AuthorizationService authorizationService) {
+    public SlaPolicyService(SlaPolicyRepository slaPolicyRepository,
+                             SlaPolicyChangeRepository slaPolicyChangeRepository,
+                             AuthorizationService authorizationService) {
         this.slaPolicyRepository = slaPolicyRepository;
+        this.slaPolicyChangeRepository = slaPolicyChangeRepository;
         this.authorizationService = authorizationService;
     }
 
@@ -33,12 +39,22 @@ public class SlaPolicyService {
         return slaPolicyRepository.findAll();
     }
 
+    public List<SlaPolicyChange> listChanges() {
+        return slaPolicyChangeRepository.findAllByOrderByChangedAtDesc();
+    }
+
     // Org-wide setting, not per-incident -- ADMIN only, unlike the day-to-day incident
     // workflow (create/transition/comment) which any authenticated MEMBER can do.
     @Transactional
     public SlaPolicy updatePolicy(Severity severity, int slaMinutes, int nearBreachPercentage, String actorUserId) {
         authorizationService.requireAdmin(actorUserId);
         SlaPolicy policy = getPolicy(severity);
+
+        // Own append-only log, not derived from updated_at -- SlaPolicy only ever holds
+        // the CURRENT values, so recording who/when/from-what-to-what needs its own row.
+        slaPolicyChangeRepository.save(new SlaPolicyChange(severity, policy.getSlaMinutes(),
+                policy.getNearBreachPercentage(), slaMinutes, nearBreachPercentage, actorUserId));
+
         policy.update(slaMinutes, nearBreachPercentage);
         return slaPolicyRepository.save(policy);
     }

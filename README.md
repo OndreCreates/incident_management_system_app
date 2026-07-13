@@ -32,7 +32,8 @@ s přístupem k druhému faktoru doplnit stejným postupem.
   case-insensitive fulltextové hledání v titulku/popisu, stránkování.
 - **Konfigurovatelné SLA**: politika (SLA okno + near-breach práh) nastavitelná per
   severity na `/sla-policies`, bez redeploye. Scheduled job hlídá breach/near-breach a
-  sklápí příznaky na incidentu.
+  sklápí příznaky na incidentu. Append-only audit log (kdo/kdy/z čeho na co) ke každé
+  změně.
 - **Eskalace** (near-breach i breach): e-mail přes `notification_center_app` a živý
   in-app toast přes WebSocket (STOMP) do admin panelu -- oba kanály best-effort, appka
   nikdy nespadne kvůli nedostupné notifikační službě.
@@ -156,7 +157,7 @@ npm run dev -- -p 3001              # admin panel na :3001
 ### Testy
 
 ```bash
-mvn test                            # 76 testů: unit (state machine matrix) + integrační (proti reálné MySQL)
+mvn test                            # 77 testů: unit (state machine matrix) + integrační (proti reálné MySQL)
 cd admin-panel && npm run build     # type-check + build všech routes
 ```
 

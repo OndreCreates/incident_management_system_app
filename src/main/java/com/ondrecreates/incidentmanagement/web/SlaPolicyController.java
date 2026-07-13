@@ -1,6 +1,7 @@
 package com.ondrecreates.incidentmanagement.web;
 
 import com.ondrecreates.incidentmanagement.domain.Severity;
+import com.ondrecreates.incidentmanagement.dto.SlaPolicyChangeResponse;
 import com.ondrecreates.incidentmanagement.dto.SlaPolicyResponse;
 import com.ondrecreates.incidentmanagement.dto.UpdateSlaPolicyRequest;
 import com.ondrecreates.incidentmanagement.service.SlaPolicyService;
@@ -35,6 +36,13 @@ public class SlaPolicyController {
     @Operation(summary = "List SLA policies", description = "One row per Severity, fixed set.")
     public List<SlaPolicyResponse> list() {
         return slaPolicyService.listPolicies().stream().map(SlaPolicyResponse::from).toList();
+    }
+
+    @GetMapping("/history")
+    @Operation(summary = "List SLA policy change history", description = "Append-only audit log across all "
+            + "severities, most recent first -- who changed what, and from/to which values.")
+    public List<SlaPolicyChangeResponse> history() {
+        return slaPolicyService.listChanges().stream().map(SlaPolicyChangeResponse::from).toList();
     }
 
     @PutMapping("/{severity}")
