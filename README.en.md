@@ -95,6 +95,9 @@ manually -- anyone with access to the second factor can add screenshots to
   service doesn't crash the escalation job, it just gets logged.
 - **Admin panel**: server-first Next.js (Server Components + Server Actions) -- the
   access token lives only in a server-side httpOnly cookie, it never reaches the browser.
+  The only client JS is `SubmitButton` (`useFormStatus`) for form pending state -- the
+  smallest slice of interactivity that actually needs it, not a blanket switch to client
+  components.
 
 ## Quick start
 

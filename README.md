@@ -92,7 +92,9 @@ s přístupem k druhému faktoru doplnit stejným postupem.
   neimplementuje vlastní doručování e-mailů. Best-effort — nedostupný notification
   service escalation job nespadne, jen se to zaloguje.
 - **Admin panel**: server-first Next.js (Server Components + Server Actions) — access
-  token žije jen v httpOnly cookii na serveru, do prohlížeče se nikdy nedostane.
+  token žije jen v httpOnly cookii na serveru, do prohlížeče se nikdy nedostane. Jediný
+  klientský JS je `SubmitButton` (`useFormStatus`) pro pending stav formulářů -- nejmenší
+  kus interaktivity, co tohle vyžaduje, ne plošný přechod na client components.
 
 ## Rychlý start
 

@@ -6,6 +6,7 @@ import { ALLOWED_TRANSITIONS, TERMINAL_STATUSES, type Postmortem, type Status, t
     type TimelineEntry } from "@/lib/types";
 import { Nav } from "@/components/Nav";
 import { SeverityBadge, StatusBadge, BreachedBadge } from "@/components/Badges";
+import { SubmitButton } from "@/components/SubmitButton";
 import {
     addCommentAction,
     assignTeamAction,
@@ -115,12 +116,9 @@ export default async function IncidentDetailPage({ params, searchParams }: Incid
                                         </option>
                                     ))}
                                 </select>
-                                <button
-                                    type="submit"
-                                    className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium hover:bg-slate-700"
-                                >
+                                <SubmitButton className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium hover:bg-slate-700">
                                     Přiřadit
-                                </button>
+                                </SubmitButton>
                             </form>
                         </div>
                     )}
@@ -137,12 +135,9 @@ export default async function IncidentDetailPage({ params, searchParams }: Incid
                                 placeholder="Co jsi zjistil/a?"
                                 className="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm focus:border-red-400 focus:outline-none"
                             />
-                            <button
-                                type="submit"
-                                className="self-start rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium hover:bg-slate-700"
-                            >
+                            <SubmitButton className="self-start rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium hover:bg-slate-700">
                                 Přidat komentář
-                            </button>
+                            </SubmitButton>
                         </form>
                     </div>
 
@@ -200,12 +195,12 @@ function PostmortemSection({ incidentId, postmortem }: { incidentId: number; pos
                     defaultValue={postmortem?.actionItems ?? undefined}
                     required={false}
                 />
-                <button
-                    type="submit"
+                <SubmitButton
                     className="self-start rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400"
+                    pendingLabel="Ukládám…"
                 >
                     {postmortem ? "Uložit změny" : "Vytvořit postmortem"}
-                </button>
+                </SubmitButton>
             </form>
         </div>
     );
@@ -260,12 +255,9 @@ function TransitionForm({ incidentId, status }: { incidentId: number; status: St
                 placeholder="Poznámka (volitelné)"
                 className="rounded-lg border border-white/10 bg-slate-950 px-2.5 py-1.5 text-xs focus:border-red-400 focus:outline-none"
             />
-            <button
-                type="submit"
-                className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-400"
-            >
+            <SubmitButton className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-400">
                 → {status}
-            </button>
+            </SubmitButton>
         </form>
     );
 }
@@ -322,18 +314,15 @@ function TimelineItem({
                                 rows={2}
                                 className="rounded-lg border border-white/10 bg-slate-950 px-2.5 py-1.5 text-xs focus:border-red-400 focus:outline-none"
                             />
-                            <button
-                                type="submit"
-                                className="self-start rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium hover:bg-slate-700"
-                            >
+                            <SubmitButton className="self-start rounded-lg bg-slate-800 px-3 py-1 text-xs font-medium hover:bg-slate-700">
                                 Uložit
-                            </button>
+                            </SubmitButton>
                         </form>
                     </details>
                     <form action={deleteCommentAction.bind(null, incidentId, entry.commentId as number)}>
-                        <button type="submit" className="text-xs text-red-400 hover:text-red-300">
+                        <SubmitButton className="text-xs text-red-400 hover:text-red-300" pendingLabel="Mažu…">
                             Smazat
-                        </button>
+                        </SubmitButton>
                     </form>
                 </div>
             )}

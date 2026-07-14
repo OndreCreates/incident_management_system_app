@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/auth";
 import type { Incident, IncidentPage, Severity, Status } from "@/lib/types";
 import { Nav } from "@/components/Nav";
 import { SeverityBadge, StatusBadge, BreachedBadge } from "@/components/Badges";
+import { SubmitButton } from "@/components/SubmitButton";
 import { bulkAssignAction, bulkTransitionAction } from "./actions";
 
 const STATUSES: Status[] = ["CREATED", "ASSIGNED", "INVESTIGATING", "MITIGATED", "RESOLVED", "CLOSED"];
@@ -123,13 +124,12 @@ export default async function IncidentsPage({ searchParams }: IncidentsPageProps
                                     ))}
                                 </select>
                             </Field>
-                            <button
-                                type="submit"
+                            <SubmitButton
                                 formAction={bulkTransitionAction}
                                 className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
                             >
                                 Přejít do stavu
-                            </button>
+                            </SubmitButton>
                             <Field label="Přiřadit uživateli (e-mail)">
                                 <input
                                     type="text"
@@ -138,13 +138,12 @@ export default async function IncidentsPage({ searchParams }: IncidentsPageProps
                                     className={selectClass}
                                 />
                             </Field>
-                            <button
-                                type="submit"
+                            <SubmitButton
                                 formAction={bulkAssignAction}
                                 className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
                             >
                                 Hromadně přiřadit
-                            </button>
+                            </SubmitButton>
                         </div>
 
                         <IncidentTable incidentPage={incidentPage} showCheckboxes />

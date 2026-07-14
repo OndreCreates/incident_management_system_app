@@ -1,6 +1,7 @@
 import { fetchTeam } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
 import { Nav } from "@/components/Nav";
+import { SubmitButton } from "@/components/SubmitButton";
 import { addTeamMemberAction } from "@/app/teams/actions";
 
 interface TeamDetailPageProps {
@@ -39,12 +40,9 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
                             placeholder="novy@example.com"
                             className="flex-1 rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm focus:border-red-400 focus:outline-none"
                         />
-                        <button
-                            type="submit"
-                            className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium hover:bg-slate-700"
-                        >
+                        <SubmitButton className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium hover:bg-slate-700">
                             Přidat
-                        </button>
+                        </SubmitButton>
                     </form>
                 </div>
             </main>

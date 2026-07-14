@@ -1,5 +1,6 @@
 import { requireSession } from "@/lib/auth";
 import { Nav } from "@/components/Nav";
+import { SubmitButton } from "@/components/SubmitButton";
 import { createIncidentAction } from "@/app/incidents/actions";
 
 interface NewIncidentPageProps {
@@ -86,12 +87,12 @@ export default async function NewIncidentPage({ searchParams }: NewIncidentPageP
                         </div>
                     </div>
 
-                    <button
-                        type="submit"
+                    <SubmitButton
                         className="w-full rounded-lg bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-400"
+                        pendingLabel="Vytvářím…"
                     >
                         Vytvořit incident
-                    </button>
+                    </SubmitButton>
                 </form>
             </main>
         </div>
