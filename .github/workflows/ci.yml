@@ -59,6 +59,9 @@ jobs:
       - name: Type-check
         run: npx tsc --noEmit
 
+      - name: Lint
+        run: npm run lint
+
       - name: Build
         # Placeholder values -- Next.js executes route/page modules while tracing the
         # standalone build and lib/config.ts throws if these are unset. Nothing here is

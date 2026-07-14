@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { ApiError, fetchIncidentDetail, fetchPostmortem, fetchTeam, fetchTeams } from "@/lib/api";
 import { requireSession } from "@/lib/auth";
 import { verifyIdToken } from "@/lib/verifyIdToken";
-import { ALLOWED_TRANSITIONS, TERMINAL_STATUSES, type Postmortem, type Status, type Team,
+import { ALLOWED_TRANSITIONS, TERMINAL_STATUSES, type Postmortem, type Status,
     type TimelineEntry } from "@/lib/types";
 import { Nav } from "@/components/Nav";
 import { SeverityBadge, StatusBadge, BreachedBadge } from "@/components/Badges";
