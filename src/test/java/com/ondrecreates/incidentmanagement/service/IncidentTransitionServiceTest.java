@@ -31,7 +31,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 /**
  * Vyčerpávající matice přechodů — každá dvojice (from, to) přes všechny
  * Status hodnoty musí buď projít, nebo vyhodit InvalidTransitionException,
- * přesně podle mapy zdokumentované v CLAUDE.md.
+ * přesně podle zdokumentované mapy povolených přechodů.
  */
 class IncidentTransitionServiceTest {
 

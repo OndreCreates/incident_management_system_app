@@ -31,7 +31,7 @@ CREATE TABLE incident_comment (
 
 CREATE INDEX idx_incident_comment_incident_id ON incident_comment (incident_id);
 
--- comment_id doplňuje datový model z CLAUDE.md: prose popisuje, že COMMENT
+-- comment_id doplňuje datový model ze zadání: popis říká, že COMMENT
 -- záznam v timeline odkazuje na komentář přes ID místo duplikace textu,
 -- tabulkový výčet sloupců to ale neuváděl — sloupec je nutný, aby ten záměr šel implementovat.
 CREATE TABLE incident_timeline (
